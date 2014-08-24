@@ -1,0 +1,19 @@
+{
+    "name": "ExpressiveAnalytics/DeepThought",
+    "type": "library",
+    "description": "A highly versatile framework for attaching advanced object functionality to both legacy and modern platforms.",
+    "keywords": ["ducktape","framework"],
+    "homepage": "https://github.com/expressiveanalytics/deep-thought.php",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Blake Anderson",
+            "email": "blake@expressiveanalytics.com",
+            "homepage": "http://www.expressiveanalytics.com",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": ">=5.3.0"
+    }
+}
