@@ -3,7 +3,7 @@
     "type": "library",
     "description": "A highly versatile framework for attaching advanced object functionality to both legacy and modern platforms.",
     "keywords": ["ducktape","framework"],
-    "homepage": "https://github.com/expressiveanalytics/deep-thought.php",
+    "homepage": "https://github.com/expressive-analytics/deep-thought.php",
     "license": "MIT",
     "authors": [
         {
