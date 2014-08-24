@@ -1,5 +1,5 @@
 {
-    "name": "ExpressiveAnalytics/DeepThought",
+    "name": "expressive-analytics/deep-thought",
     "type": "library",
     "description": "A highly versatile framework for attaching advanced object functionality to both legacy and modern platforms.",
     "keywords": ["ducktape","framework"],
