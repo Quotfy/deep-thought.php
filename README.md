@@ -5,7 +5,7 @@ A highly versatile framework for attaching advanced object functionality to both
 
 ## Getting Started
 
-The easiest way to get started with DeepThought is by using Composer. Add the following to **composer.json** at the top lev$
+The easiest way to get started with DeepThought is by using Composer. Add the following to **composer.json** at the top level of your project:
 
 ```
 {
@@ -29,7 +29,7 @@ php -r "require('vendor/autoload.php'); DTLog::debug('Nice work.');"
 
 ### Adding Modules
 
-The core components of the DeepThought library contain only the bare essentials. For most projects, you will want to use ad$
+The core components of the DeepThought library contain only the bare essentials. For most projects, you will want to use additional modules. Installing these with Composer is as easy as adding a line to **composer.json** and rerunning the install command.
 
 For example:
 
