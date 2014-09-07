@@ -1,4 +1,7 @@
 <?php
+
+namespace ExpressiveAnalytics\DeepThought\DTTestCase;
+
 class DTTestCase extends PHPUnit_Framework_TestCase{
 	protected $db=null;
 
