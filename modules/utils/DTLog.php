@@ -95,7 +95,9 @@ class DTLog{
 		$timestamp = date("D M d H:i:s Y");
 		$msg = is_string($msg)?$msg:json_encode($msg);
 		flock($fp,LOCK_EX);
-		if(fwrite($fp,"[{$timestamp}] {$file}:{$line}:{$msg}\n")===false)
+		if(static::isCLI()) //wrap with log text
+			$msg = "[{$timestamp}] {$file}:{$line}:{$msg}\n";
+		if(fwrite($fp,$msg)===false)
 			error_log("DTLog::write():Could not write to log!");
 		flock($fp,LOCK_UN);
 		return $msg;
@@ -122,26 +124,35 @@ class DTLog{
 	
 	public static function colorize($text, $status) {
 		$out = "";
+		$cli = static::isCLI();
 		$status = strtoupper($status);
 		switch($status) {
 			case "SUCCESS":
-				$out = "[42m"; //Green background
+				$out = $cli?"[42m":"green";
 				break;
 			case "FAILURE":
 			case "ERROR":
-				$out = "[41m"; //Red background
+				$out = $cli?"[41m":"red";
 				break;
 			case "WARN":
 			case "WARNING":
-				$out = "[43m"; //Yellow background
+				$out = $cli?"[43m":"yellow";
 				break;
 			case "NOTE":
 			case "INFO":
-				$out = "[44m"; //Blue background
+				$out = $cli?"[44m":"blue";
 				break;
 			default:
 				throw new \Exception("Invalid status: " . $status);
 		}
-		return chr(27) . "$out" . "$text" . chr(27) . "[0m";
+		if($cli)
+			return chr(27)."{$out}{$text}".chr(27)."[0m";
+		else
+			return "<span style='background:{$out}'>{$text}</span>";
+	}
+	
+	public static function isCLI(){
+		$sapi_type = php_sapi_name();
+		return (substr($sapi_type, 0, 3) == 'cli');
 	}
 }
