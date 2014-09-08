@@ -37,7 +37,7 @@ For example:
 {
  "require":{
   "expressive-analytics/deep-thought": "dev-master"
-  "expressive-analytics/deep-thought/stores-mysql": "dev-master"
+  "expressive-analytics/deep-thought/store-mysql": "dev-master"
  }
 }
 ```

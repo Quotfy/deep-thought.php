@@ -1,6 +1,6 @@
-<?php
+<?php namespace ExpressiveAnalytics\DeepThought;
 /**
- * DTSettings
+ * DTSettingsStorage
  *
  * Copyright (c) 2013-2014, Expressive Analytics, LLC <info@expressiveanalytics.com>.
  * All rights reserved.
@@ -30,61 +30,19 @@
  * @link       http://www.expressiveanalytics.com/
  * @since      version 1.0.0
  */
- 
-namespace ExpressiveAnalytics\DeepThought;
-
-class DTSettings extends DTModel{
-
-	/**
-	 * initialize the shared settings from +$path+
-	 *	@static
-	 *	@param string $path the path to the shared settings
-	 *	@retval DTSettings the shared settings
-	*/
-	abstract static function initShared(string $path);
-	
-	/**
-	 * get the shared settings for the concrete subclass
-	 * 
-	 * @access public
-	 * @abstract
-	 * @static
-	 * @retval DTSettings the shared settings
-	 */
-	abstract static function sharedSettings();
-}
-
-class DTSettingsConfig extends DTSettings{
-	public static $shared_config;
-	
-	public static function initShared(string $path){
-		return static::$shared_config = new static(json_decode(file_get_contents($path)));
-	}
-	
-	public static function sharedSettings(){
-		return static::$shared_config;
-	}
-	
-	public static function baseURL($suffix=''){
-	  $base = isset(static::$shared_config["base_url"])?static::$shared_config["base_url"]:$_SERVER['HTTP_HOST'];
-	  return sprintf(
-	    "%s://%s/%s",
-	    isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] != 'off' ? 'https' : 'http',
-	    $base,
-	    $suffix
-	  );
-	}
-}
 
 class DTSettingsStorage extends DTSettings{
 	public static $shared_storage;
 	protected static $_storage_connections = array(); //internal storage for singleton storage connections
+	protected static $_default_store;
 	
-	public static function initShared($path){
+	public static function initShared(string $path){
 		return static::$shared_storage = new static(json_decode(file_get_contents($path)));
 	}
 	
-	public static function sharedSettings(){
+	public static function &sharedSettings(array $settings=null){
+		if(isset($settings))
+	 		static::$shared_storage = array_merge(static::$shared_storage,$settings);
 		return static::$shared_storage;
 	}
 	
@@ -107,5 +65,23 @@ class DTSettingsStorage extends DTSettings{
 			static::$_storage_connections[$store] = new $connector($dsn,$readonly);
 		}
 		return static::$_storage_connections[$store];
+	}
+	
+	/**
+	 * returns the default store (the first store listed in storage)
+	 * 
+	 * @access public
+	 * @static
+	 * @return 
+	 */
+	public static function defaultStore(){
+		if(!isset(static::$_default_store)){
+			$storage = static::sharedSettings();
+			if($storage==null)
+				return null;
+			$store_names = array_keys($storage);
+			static::$_default_store = static::connect($store_names[0]);
+		}
+		return static::$_default_store;
 	}
 }
