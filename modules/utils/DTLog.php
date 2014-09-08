@@ -30,6 +30,8 @@
  * @link       http://www.expressiveanalytics.com/
  * @since      version 1.0.0
  */
+ 
+use ExpressiveAnalytics\DeepThought\DTSettingsConfig;
 
 class DTLog{
 	public static $error_fp = null; ///destination for error messages
@@ -70,7 +72,7 @@ class DTLog{
 	protected static function formatMessage($args){
 		$msg = array_shift($args);
 		if(!is_string($msg))
-			return is_array($msg)?json_encode($msg):(string)$msg;
+			return static::colorize(is_array($msg)?json_encode($msg):(string)$msg,"INFO");
 		$strings = array_map(function($a){
 			return static::colorize(is_array($a)?json_encode($a):(string)$a,"INFO");
 		},$args);
