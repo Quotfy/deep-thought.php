@@ -32,7 +32,7 @@
  */
 
 class DTSettingsStorage extends DTSettings{
-	public static $shared_storage;
+	public static $shared_storage = array();
 	protected static $_storage_connections = array(); //internal storage for singleton storage connections
 	protected static $_default_store;
 	
@@ -54,7 +54,7 @@ class DTSettingsStorage extends DTSettings{
 	 * @param string $store the name of the store in shared storage
 	 * @retval DTStore a valid connection or throws an exception
 	 */
-	public static function connect(string $store){
+	public static function connect($store){
 		if(!isset(static::$_storage_connections[$store])){
 			$storage = static::sharedSettings();
 			if(!isset($storage,$storage[$store]))
@@ -72,7 +72,7 @@ class DTSettingsStorage extends DTSettings{
 	 * 
 	 * @access public
 	 * @static
-	 * @return 
+	 * @return DTStore the default store
 	 */
 	public static function defaultStore(){
 		if(!isset(static::$_default_store)){

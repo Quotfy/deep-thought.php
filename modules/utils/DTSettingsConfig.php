@@ -44,13 +44,29 @@ class DTSettingsConfig extends DTSettings{
 		return static::$shared_config;
 	}
 	
+	/**
+	 * gets the URL for a given suffix file using the configured base URL.
+	 * 
+	 * @access public
+	 * @static
+	 * @param string $suffix (optional)
+	 * @return void
+	 */
 	public static function baseURL($suffix=''){
-	  $base = isset(static::$shared_config["base_url"])?static::$shared_config["base_url"]:$_SERVER['HTTP_HOST'];
-	  return sprintf(
-	    "%s://%s/%s",
-	    isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] != 'off' ? 'https' : 'http',
-	    $base,
-	    $suffix
+		$base = "";
+		if(isset(static::$shared_config["base_url"]))  	// grab base_url from the config
+			$base = static::$shared_config["base_url"];
+		else if (isset($_SERVER['HTTP_HOST'])) 			//otherwise, try to use the default HTTP_HOST
+			$base = $_SERVER['HTTP_HOST'];
+		if(substr($base, -1)!="/") //make sure we add a trailing slash
+			$base .= "/";
+		if($base=="/") //we don't have any idea about a base url
+			return "/{$suffix}";
+		return sprintf(
+		    "%s://%s%s",
+		    isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] != 'off' ? 'https' : 'http',
+		    $base,
+		    $suffix
 	  );
 	}
 }
