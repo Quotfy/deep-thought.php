@@ -1,6 +1,4 @@
-<?php namespace ExpressiveAnalytics\DeepThought\Tests;
-
-use ExpressiveAnalytics\DeepThought\DTSettingsConfig;
+<?php
 
 class DTSettingsConfigTest extends \PHPUnit_Framework_TestCase{
 	

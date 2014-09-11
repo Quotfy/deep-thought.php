@@ -1,5 +1,4 @@
 <?php
-use ExpressiveAnalytics\DeepThought\DTSettings;
 
 class DTSettingsTest extends \PHPUnit_Framework_TestCase{
 	

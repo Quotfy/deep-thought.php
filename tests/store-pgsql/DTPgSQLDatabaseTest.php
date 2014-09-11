@@ -1,7 +1,4 @@
-<?php namespace ExpressiveAnalytics\DeepThought\Tests;
-
-use ExpressiveAnalytics\DeepThought\DTSettingsStorage;
-use ExpressiveAnalytics\DeepThought\DTPgSQLDatabase;
+<?php
 
 class DTPgSQLDatabaseTest extends \PHPUnit_Framework_TestCase{
 	protected $db = null;

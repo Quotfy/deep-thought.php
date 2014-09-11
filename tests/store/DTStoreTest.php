@@ -1,6 +1,4 @@
 <?php
-use \ExpressiveAnalytics\DeepThought\DTLog;
-use \ExpressiveAnalytics\DeepThought\DTStore;
 
 class DTStoreTest extends \PHPUnit_Framework_TestCase{
 	

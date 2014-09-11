@@ -31,9 +31,7 @@
  * @since      version 1.0.0
  */
  
-namespace ExpressiveAnalytics\DeepThought;
- 
-class DTModel implements \arrayaccess {
+class DTModel implements arrayaccess {
 	/** require properties to be defined in the class, defaults to false */
 	protected static $strict_properties = false;
 	protected static $storage_table = null;

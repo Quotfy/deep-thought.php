@@ -1,6 +1,6 @@
 {
 	"test-db":{
-		"connector":"ExpressiveAnalytics\\DeepThought\\DTPgSQLDatabase",
+		"connector":"DTPgSQLDatabase",
 		"dsn":"pgsql://dtuser:KUqUCaq2@localhost/test"
 	}
 }

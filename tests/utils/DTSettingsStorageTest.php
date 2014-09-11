@@ -1,6 +1,4 @@
-<?php namespace ExpressiveAnalytics\DeepThought\Tests;
-
-use ExpressiveAnalytics\DeepThought\DTSettingsStorage;
+<?php
 
 class DTSettingsStorageTest extends \PHPUnit_Framework_TestCase{
 	public function setup(){
@@ -8,10 +6,10 @@ class DTSettingsStorageTest extends \PHPUnit_Framework_TestCase{
 		$settings = array(); //clear out any old shared settings
 		DTSettingsStorage::sharedSettings(array(
 			"test"=>array(
-				"connector"=>"ExpressiveAnalytics\\DeepThought\\DTSQLiteDatabase",
+				"connector"=>"DTSQLiteDatabase",
 				"dsn"=>"file://".sys_get_temp_dir()."/test_db.sqlite"),
 			"other"=>array(
-				"connector"=>"ExpressiveAnalytics\\DeepThought\\DTSQLiteDatabase",
+				"connector"=>"DTSQLiteDatabase",
 				"dsn"=>"file://".sys_get_temp_dir()."/other_db.sqlite")
 			)
 		);

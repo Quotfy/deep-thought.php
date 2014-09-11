@@ -1,4 +1,4 @@
-<?php namespace ExpressiveAnalytics\DeepThought;
+<?php
 /**
  * DTSettings
  *
@@ -30,8 +30,6 @@
  * @link       http://www.expressiveanalytics.com/
  * @since      version 1.0.0
  */
- 
-namespace ExpressiveAnalytics\DeepThought;
 
 class DTSettings{
 	private static $shared_settings = array();

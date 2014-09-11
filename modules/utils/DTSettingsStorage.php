@@ -1,4 +1,4 @@
-<?php namespace ExpressiveAnalytics\DeepThought;
+<?php
 /**
  * DTSettingsStorage
  *

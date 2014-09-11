@@ -1,4 +1,4 @@
-<?php namespace ExpressiveAnalytics\DeepThought;
+<?php
 /**
  * DTSQLiteDatabase
  *
@@ -30,9 +30,6 @@
  * @link       http://www.expressiveanalytics.com/
  * @since      version 1.0.0
  */
-
-use ExpressiveAnalytics\DeepThought\DTStore;
-use ExpressiveAnalytics\DeepThought\DTLog;
 
 class DTSQLiteDatabase extends DTStore{
 

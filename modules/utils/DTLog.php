@@ -1,4 +1,4 @@
-<?php namespace ExpressiveAnalytics\DeepThought;
+<?php
 /**
  * DTLog
  *
@@ -30,8 +30,6 @@
  * @link       http://www.expressiveanalytics.com/
  * @since      version 1.0.0
  */
- 
-use ExpressiveAnalytics\DeepThought\DTSettingsConfig;
 
 class DTLog{
 	public static $error_fp = null; ///destination for error messages

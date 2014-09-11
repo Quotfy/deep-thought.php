@@ -1,6 +1,4 @@
-<?php namespace ExpressiveAnalytics\DeepThought\Tests;
-
-use ExpressiveAnalytics\DeepThought\DTQueryBuilder;
+<?php
 
 class DTQueryBuilderTest extends \PHPUnit_Framework_TestCase{
 	public function testSelectStatement(){

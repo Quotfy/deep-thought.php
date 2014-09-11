@@ -20,30 +20,12 @@
 	    "phpunit/PHPUnit":">=4.0.0"
     },
     "autoload": {
-	    "psr-4":{
-	    	"ExpressiveAnalytics\\DeepThought\\":
-	    		["modules/utils",
-	    		"modules/store",
-	    		"modules/store-database",
-	    		"modules/store-sqlite",
-	    		"modules/store-mysql",
-	    		"modules/store-pgsql",
-	    		"modules/test",
-	    		"modules/core"]
-	    }
-    },
-    "autoload": {
-	    "psr-4":{
-	    	"ExpressiveAnalytics\\DeepThought\\":
-	    		["modules/utils",
-	    		"modules/store",
-	    		"modules/store-database",
-	    		"modules/store-sqlite",
-	    		"modules/store-mysql",
-	    		"modules/store-pgsql",
-	    		"modules/test",
-	    		"modules/core"],
-		    "ExpressiveAnalytics\\DeepThought\\Tests\\": "tests/"
-	    }
+	    "classmap":
+    		["modules/utils",
+    		"modules/store",
+    		"modules/store-sqlite",
+    		"modules/store-mysql",
+    		"modules/store-pgsql",
+    		"modules/core"]
     }
 }

@@ -1,7 +1,5 @@
 <?php
 
-use \ExpressiveAnalytics\DeepThought\DTModel;
-
 class DTModelTest extends \PHPUnit_Framework_TestCase{
 	public function testConstructor(){
 		$test_str = '{"fruit": "apple", "color": "red"}';

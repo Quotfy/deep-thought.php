@@ -1,6 +1,4 @@
 <?php
-use ExpressiveAnalytics\DeepThought\DTLog;
-use ExpressiveAnalytics\DeepThought\DTSettingsConfig;
 
 class DTLogTest extends \PHPUnit_Framework_TestCase{
 	public function testError(){
