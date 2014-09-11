@@ -36,8 +36,17 @@ abstract class DTStore{
 	public $dsn=null;
 	public $readonly;
 	public $dbname;
+	public $ilike = "LIKE"; //keyword for case-insensitive search
+	public $conn = null;
 	
-	/** @param dsnOrTables - either a Data Source Name (DSN) or an array of tables in storage format */
+	/**
+	 * __construct function.
+	 * 
+	 * @access public
+	 * @param mixed $dsnOrTables (default: array()) either a Data Source Name (DSN) or an array of tables in storage format
+	 * @param bool $readonly (default: false)
+	 * @return void
+	 */
 	function __construct($dsnOrTables=array(),$readonly=false){
 		$this->readonly = $readonly;
 		if(is_array($dsnOrTables)) // we were given the represented store
@@ -46,6 +55,14 @@ abstract class DTStore{
 			$this->connect($dsnOrTables);
 	}
 	
+	/**
+	 * initialize a temporary store with the given SQL.
+	 * 
+	 * @access public
+	 * @static
+	 * @param string $init_sql (default: "")
+	 * @return void
+	 */
 	public static function init($init_sql=""){
 		$dsn = "file://".tempnam(sys_get_temp_dir(),"dt.store.");
 		$store = new static($dsn);
@@ -54,34 +71,72 @@ abstract class DTStore{
 		return $store;
 	}
 	
-	public function shareTables(&$tables){
+	/**
+	 * sets the internal storage to the provided tables by reference.
+	 * 
+	 * @access public
+	 * @param array &$tables
+	 * @return void
+	 */
+	public function shareTables(array &$tables){
 		$this->tables = $tables;
 	}
-	
-	/** creates a new storage by duplicating +store+ */
+
+	/**
+	 * creates a new storage by duplicating +store+.
+	 * 
+	 * @access public
+	 * @static
+	 * @param DTStore $store
+	 * @return void
+	 */
 	public static function copy(DTStore $store){
 		return new static($store->tables);
 	}
 	
-	/** creates a new storage sharing the internal tables of +store+ */
+	/**
+	 * creates a new storage sharing the internal tables of +store+.
+	 * 
+	 * @access public
+	 * @static
+	 * @param DTStore $store
+	 * @return void
+	 */
 	public static function share(DTStore $store){
 		$new = new static();
 		$new->shareTables($store->tables);
 		return $new;
 	}
 	
-//===============
-//! Connection
-//===============
-	/** connects to a data store via data source name */
+//! Connection methods
+///@name Connection methods
+///@{
+
+	/**
+	 * connects to a data store via data source name.
+	 * 
+	 * @access public
+	 * @abstract
+	 * @param string $dsn
+	 * @return void
+	 */
 	abstract public function connect($dsn);
-	/** disconnects from data store, saving any ongoing transactions */
+
+	/**
+	 * disconnects from data store, saving any ongoing transactions.
+	 * 
+	 * @access public
+	 * @abstract
+	 * @return void
+	 */
 	abstract public function disconnect();
-	/** initializes a temporary database with optional SQL to populate
-		@return returns a DTStore object */
-		
-	/** pushes internal storage to permanent storage
-		@warn will not modify existing tables
+
+	/**
+	 * pushes internal storage to permanent storage.
+	 * 
+	 * @access public
+	 * @warn will not modify existing tables
+	 * @return void
 	 */
 	public function pushTables(){
 		$permanent_tables = $this->allTables();
@@ -114,8 +169,11 @@ abstract class DTStore{
 		}
 	}
 	
-	/** pulls all tables to internal storage
-		@return returns false if internal storage is already set
+	/**
+	 * pulls all tables to internal storage.
+	 * 
+	 * @access public
+	 * @return returns false if internal storage is already set
 	 */
 	public function pullTables(){
 		if(isset($this->tables)&&count($this->tables)>0)
@@ -126,30 +184,92 @@ abstract class DTStore{
 			$this->tables[$table] = $this->select($stmt);
 		}
 	}
+///@}
 	
-//===============
-//! Queries
-//===============
-	/** prepares a parameter for safe storage. */
-	abstract public function clean($param);
-	/** executes a given query without expecting a result */
+	
+//! Query methods
+///@name Query methods
+///@{
+
+	/**
+	 * makes a value safe for storage.
+	 * 
+	 * @access public
+	 * @abstract
+	 * @param string $val
+	 * @retval string the cleaned value
+	 */
+	abstract public function clean($val);
+
+	/**
+	 * executes a given query without expecting a result.
+	 * 
+	 * @access public
+	 * @abstract
+	 * @param string $stmt
+	 * @return void
+	 */
 	abstract public function query($stmt);
-	/** @return returns an array with the results of a query */
+	
+	/**
+	 * execute the given select statement and return the results.
+	 * 
+	 * @access public
+	 * @abstract
+	 * @param string $stmt
+	 * @retval array returns the results of a query
+	 */
 	abstract public function select($stmt);
-	/** @return returns the id of the last row inserted */
+
+	/**
+	 * get the ID for the last inserted row.
+	 * 
+	 * @access public
+	 * @abstract
+	 * @retval int returns the id of the last row inserted
+	 */
 	abstract public function lastInsertID();
-	/** @return returns an array column names */
-	abstract public function columnsForTable($table);
-	/** @return returns an array of table names */
+	
+	/**
+	 * get a list of columns for the given +$table_name+.
+	 * 
+	 * @access public
+	 * @abstract
+	 * @param string $table_name
+	 * @retval array returns an array column names
+	 */
+	abstract public function columnsForTable($table_name);
+	
+	/**
+	 * get a list of all the tables.
+	 * 
+	 * @access public
+	 * @abstract
+	 * @return array returns the names of all tables in storage
+	 */
 	abstract public function allTables();
 	
 	
-	/** @return returns a single object matching query */
+	/**
+	 * select a single row as a key-value array
+	 * 
+	 * @access public
+	 * @param string $stmt
+	 * @retval array returns a single object matching query or null for no results
+	 */
 	public function select1($stmt){
 		$rows = $this->select($stmt);
 		return (count($rows)>0?$rows[0]:null);
 	}
-	/** @return returns an array of objects of type +class_name+ */
+
+	/**
+	 * convert a set of rows to objects of type +class_name+
+	 * 
+	 * @access public
+	 * @param string $stmt
+	 * @param string $class_name
+	 * @retval array returns an array of objects of type +class_name+
+	 */
 	public function selectAs($stmt,$class_name){
 		$list = array();
 		$rows = $this->select($stmt);
@@ -159,8 +279,14 @@ abstract class DTStore{
 		}
 		return $list;
 	}
-	/** pairs the first 2 columns (key,val) in an assoc array
-	@returns the key-value paired query results */
+
+	/**
+	 * pairs the first 2 columns (key,val) in an assoc array.
+	 * 
+	 * @access public
+	 * @param mixed $stmt
+	 * @retval array the key-value paired query results
+	 */
 	public function selectKV($stmt){
 		$list = array();
 		$rows = $this->select($stmt);
@@ -174,102 +300,240 @@ abstract class DTStore{
 		}
 		return $list;
 	}
-	/** @return returns the id of the new row */
+	
+	/**
+	 * execute an insert statement.
+	 * 
+	 * @access public
+	 * @param string $stmt
+	 * @retval int the id of the new row
+	 */
 	public function insert($stmt){
 		$this->query($stmt);
 		return $this->lastInsertID();
 	}
 	
-//================
-//! Query Builder
-//================
-	/** @return returns a DTQueryBuilder with the appropriate where clause */
-	public function where($where_str){
-		$qb = new DTQueryBuilder($this);
-		return $qb->where($where_str);
-	}
+	/**
+	 * prepare a statement.
+	 * 
+	 * @access public
+	 * @abtract
+	 * @param string $query
+	 * @param string $name (default: null) the name of the statement, or a randomly generated name
+	 * @return mixed the name or object to pass to the first arguement of execute()
+	 */
+	abstract public function prepareStatement($query,&$name=null);
 	
-	public function filter(Array $filter=array()){
-		$qb = new DTQueryBuilder($this);
-		return $qb->filter($filter);
-	}
+	/**
+	 * create the relevant placeholder value for a prepared statement.
+	 * 
+	 * @access public
+	 * @abstract
+	 * @param array &$params
+	 * @param mixed $val
+	 * @return string the placeholder to use
+	 */
+	abstract public function placeholder(&$params,$val);
 	
+	/**
+	 * execute a prepared statement.
+	 * 
+	 * @access public
+	 * @abstract
+	 * @param mixed $stmt
+	 * @param array $params (default: array())
+	 * @retval array the results of the statement
+	 */
+	abstract public function execute($stmt,$params=array());
+///@}
+
+
+//! Query Builder methods
+///@name Query Builder methods
+///@{
+
+	/**
+	 * create an empty query builder object to work with the current storage.
+	 * 
+	 * @access public
+	 * @return DTQueryBuilder a query builder connected to the current storage
+	 */
 	public function qb(){
 		return new DTQueryBuilder($this);
 	}
 	
-	public function prepared($stmt){
-		return new DTPreparedQueryBuilder($this,$stmt);
+	/**
+	 * create a new query builder with the given where clause.
+	 * 
+	 * @access public
+	 * @param mixed $where_str
+	 * @retval DTQueryBuilder returns a DTQueryBuilder with the appropriate where clause
+	 */
+	public function where($where_str){
+		return $this->filter()->where($where_str);
 	}
 	
-//===============
-//! Transactions
-//===============
-	/** initiates an atomic transaction */
-	//abstract public function begin();
-	/** saves the changes of the current transaction */
-	//abstract public function commit();
-	/** cancels current transaction and reverts to pre-transaction state */
-	//abstract public function rollback();
+	/**
+	 * create a new query builder with the given filter parameters.
+	 * 
+	 * @access public
+	 * @param Array $filter (default: array())
+	 * @retval DTQueryBuilder returns a DTQueryBuilder with the appropriate filter
+	 */
+	public function filter(Array $filter=array()){
+		$qb = $this->qb();
+		return $qb->filter($filter);
+	}
 	
+	/**
+	 * create a query builder to represent a prepared statement.
+	 * 
+	 * @access public
+	 * @param string $stmt_name a unique name for the prepared statement
+	 * @retval DTPreparedQueryBuilder the prepared QB
+	 */
+	public function prepare($stmt_name=null){
+		return new DTPreparedQueryBuilder($this,$stmt_name);
+	}
+///@}
+	
+//! Transaction methods
+///@name Transaction methods
+///@{
+	
+	/**
+	 * initiates an atomic transaction.
+	 * 
+	 * @access public
+	 * @return void
+	 */
 	public function begin(){
 		$this->query("BEGIN");
 	}
 	
+	/**
+	 * saves the changes of the current transaction.
+	 * 
+	 * @access public
+	 * @return void
+	 */
 	public function commit(){
 		$this->query("COMMIT");
 	}
 	
+	/**
+	 * cancels current transaction and reverts to pre-transaction state.
+	 * 
+	 * @access public
+	 * @return void
+	 */
 	public function rollback(){
 		$this->query("ROLLBACK");		
 	}
 	
-//===============
-//! Date Methods
-//===============
-	/** @return returns a storage-formatted string representing the current UTC timestamp */
+///@}
+
+//! Date methods
+///@name Date methods
+///@{
+
+	/**
+	 * get the current UTC time in stroage format.
+	 * 
+	 * @access public
+	 * @static
+	 * @retval returns a storage-formatted string representing the current UTC timestamp
+	 */
 	public static function now(){
 		return static::gmdate();
 	}
 	
+	/**
+	 * get the current date in storage format.
+	 * 
+	 * @access public
+	 * @static
+	 * @param mixed $timestamp (default: null)
+	 * @retval string returns a storage-formatted string representing the date
+	 */
 	public static function day($timestamp=null){
 		$timestamp = isset($timestamp)?$timestamp:time();
 		return date("Y-m-d e",$timestamp);
 	}
 	
-	/** @return returns a storage-formatted string representing the given timestamp */
+	/**
+	 * get the current date for storage
+	 * 
+	 * @access public
+	 * @static
+	 * @param mixed $timestamp (default: null)
+	 * @retval string returns a storage-formatted string (in local time) representing the given timestamp
+	 */
 	public static function date($timestamp=null){
 		$timestamp = isset($timestamp)?$timestamp:time();
 		return date("Y-m-d H:i:s e",$timestamp);
 	}
 	
-	/** @return returns a storage-formatted string representing the given (local) timestamp convered to UTC */
+	/**
+	 * get the current date for storage as UTC
+	 * 
+	 * @access public
+	 * @static
+	 * @param mixed $timestamp (default: null)
+	 * @retval string returns a storage-formatted string (in UTC) representing the given timestamp
+	 */
 	public static function gmdate($timestamp=null){
 		$timestamp = isset($timestamp)?$timestamp:time();
 		return gmdate("Y-m-d H:i:s e",$timestamp);
 	}
 	
-	/** @return returns the conversion of a local time to gmtime */
-	public static function gmtime($timestamp=null){
-		$timestamp = isset($timestamp)?$timestamp:time();
-		//return (int)gmdate('U',$timestamp);
-		return $timestamp - (int)substr(date('O'),0,3)*60*60;
-	}
-	
+	/**
+	 * storage-format for local time.
+	 * 
+	 * @access public
+	 * @static
+	 * @param mixed $timestamp (default: null)
+	 * @return void
+	 */
 	public static function time($timestamp=null){
 		$timestamp = isset($timestamp)?$timestamp:time();
 		return date("H:i:s",$timestamp);
 	}
 	
-	public static function localizedDate($date_str){
-		return strftime("%x",$date_str);
+	/**
+	 * localizedDate function.
+	 * 
+	 * @access public
+	 * @static
+	 * @param int $timestamp (default: null)
+	 * @return void
+	 */
+	public static function localizedDate($timestamp=null){
+		return strftime("%x",$timestamp);
 	}
 	
-	public static function localizedTime($time_str){
-		return strftime("%r",$time_str);
+	/**
+	 * returns the localized time string.
+	 * 
+	 * @access public
+	 * @static
+	 * @param int $timestamp (default: null)
+	 * @return void
+	 */
+	public static function localizedTime($timestamp=null){
+		return strftime("%X",$timestamp);
 	}
+///@}
 	
+	/**
+	 * call disconnect() on destruct.
+	 * 
+	 * @access public
+	 * @return void
+	 */
 	function __destruct() {
-      $this->disconnect();
+		try{
+			$this->disconnect();
+		}catch(\Exception $e){}
    }
 }

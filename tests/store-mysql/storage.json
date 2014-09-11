@@ -1,0 +1,6 @@
+{
+	"test-db":{
+		"connector":"ExpressiveAnalytics\\DeepThought\\DTMySQLDatabase",
+		"dsn":"mysql://dtuser:KUqUCaq2@localhost/test"
+	}
+}

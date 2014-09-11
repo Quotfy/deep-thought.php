@@ -4,6 +4,8 @@ use ExpressiveAnalytics\DeepThought\DTSettingsStorage;
 
 class DTSettingsStorageTest extends \PHPUnit_Framework_TestCase{
 	public function setup(){
+		$settings = &DTSettingsStorage::sharedSettings();
+		$settings = array(); //clear out any old shared settings
 		DTSettingsStorage::sharedSettings(array(
 			"test"=>array(
 				"connector"=>"ExpressiveAnalytics\\DeepThought\\DTSQLiteDatabase",

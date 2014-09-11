@@ -31,58 +31,126 @@
  * @since      version 1.0.0
  */
 
-use ExpressiveAnalytics\DeepThought\DTDatabase;
+use ExpressiveAnalytics\DeepThought\DTStore;
+use ExpressiveAnalytics\DeepThought\DTLog;
 
-class DTSQLiteDatabase extends DTDatabase{
+class DTSQLiteDatabase extends DTStore{
+
+	/**
+	 * connects to an SQLite data store via data source name.
+	 * 
+	 * @access public
+	 * @abstract
+	 * @param string $dsn
+	 * @return void
+	 */
 	public function connect($dsn){
 		$parts = parse_url($dsn);
 		$database = $parts["path"];
 		$this->conn = new \SQLite3($database);
 	}
 	
-	public function select($query){
+	/**
+	 * execute the given select statement and return the results.
+	 * 
+	 * @access public
+	 * @param string $stmt
+	 * @retval array returns the results of a query
+	 */
+	public function select($stmt){
 		$object = array();
-		if(($result=$this->conn->query($query))===false){
-			DTLog::error($this->conn->lastErrorMsg()."\n".$query);
+		if(($result=$this->conn->query($stmt))===false){
+			DTLog::error(DTLog::colorize($this->conn->lastErrorMsg(),"error")."\n".$stmt);
 			return $object;
 		}
-		while($result!==false && $row=$result->fetchArray(SQLITE3_ASSOC)){
+		while($result!==false && $row=$result->fetchArray(SQLITE3_ASSOC))
 			$object[] = $row;
-		}
 		return $object;
 	}
 	
-	public function query($query){
-		if($this->conn->exec($query)===false)
-			throw new Exception($this->conn->lastErrorMsg()."\n".$query);
+	/**
+	 * executes a given query without expecting a result.
+	 * 
+	 * @access public
+	 * @param string $stmt
+	 * @return void
+	 */
+	public function query($stmt){
+		if(@$this->conn->exec($stmt)===false)
+			throw new \Exception(DTLog::colorize($this->conn->lastErrorMsg(),"error")."\n".$stmt);
 	}
 	
-	public function clean($param){
-		return $this->conn->escapeString($param);
+	/**
+	 * makes a value safe for storage.
+	 * 
+	 * @access public
+	 * @param string $val
+	 * @retval string the cleaned value
+	 */
+	public function clean($val){
+		return $this->conn->escapeString($val);
 	}
 	
+	/**
+	 * disconnects from data store, saving any ongoing transactions.
+	 * 
+	 * @access public
+	 * @return void
+	 */
 	public function disconnect(){
-		$this->conn->close();
+		if(!isset($this->conn))
+			throw new \Exception("Attempt to disconnect an nonexistent connection.");
+		if(@$this->conn->close()===false)
+			throw new \Exception(DTLog::colorize($this->conn->lastErrorMsg(),"error")."\n".$stmt);
 	}
 	
+	/**
+	 * get the ID for the last inserted row.
+	 * 
+	 * @access public
+	 * @retval int returns the id of the last row inserted or 0
+	 */
 	public function lastInsertID(){
 		return $this->conn->lastInsertRowID();
 	}
 	
-	public function insert($query){
-		$this->query($query);
+	/**
+	 * execute an insert statement.
+	 * 
+	 * @access public
+	 * @param string $stmt
+	 * @retval int the id of the new row
+	 */
+	public function insert($stmt){
+		$this->query($stmt);
 		return $this->lastInsertID();
 	}
 	
+	/**
+	 * create the relevant placeholder value for a prepared statement.
+	 * 
+	 * @access public
+	 * @param array &$params the mainfest for prepared values
+	 * @param mixed $val the value to exchange for the placeholder
+	 * @return string the placeholder to use
+	 */
 	public function placeholder(&$params,$val){
 		$params[] = $val;
 		$i = count($params);
 		return ":{$i}";
 	}
 	
-	public function prepare($name){
+	/**
+	 * create a query builder to represent a prepared statement.
+	 * 
+	 * @access public
+	 * @param string $stmt (optional) a unique name for the prepared statement
+	 * @param string $name (default:null) the name of the statement, randomly generated if not supplied
+	 * @retval a value appropriate for the first argument of execute()
+	 */
+	public function prepareStatement($stmt,&$name=null){
 		$name = isset($name)?$name:"DT_prepared_".rand();
-		return $this->conn->prepare($name);
+		return $this->conn->prepare($stmt);
 	}
 	
 	public function execute($stmt,$params=array()){
@@ -97,23 +165,33 @@ class DTSQLiteDatabase extends DTDatabase{
 			$stmt->bindValue(":".($i+1),$p,$type);
 		}
 		$result = $stmt->execute();
-		$object = array();
+		if($result===false)
+			throw new \Exception(DTLog::colorize($this->conn->lastErrorMsg(),"error"));
+		$rows = array();
 		while($result!==false && $row=$result->fetchArray(SQLITE3_ASSOC)){
-			$object[] = $row;
+			$rows[] = $row;
 		}
-		return $object;
+		return $rows;
 	}
 	
-	public function execute_insert($name,$params){
-		$this->execute($name,$params);
-		return $this->lastInsertID();
-	}
-	
+	/**
+	 * get the list of column names for a table.
+	 * 
+	 * @access public
+	 * @param string $table the name of the table
+	 * @retval array the list of table columns
+	 */
 	public function columnsForTable($table){
 		return array_reduce($this->select("PRAGMA table_info(`{$table}`)"),
 			function($rV,$cV) { $rV[]=$cV['name']; return $rV; },array());
 	}
 	
+	/**
+	 * get the list of all the tables.
+	 * 
+	 * @access public
+	 * @retval array the list of table names
+	 */
 	public function allTables(){
 		return array_reduce($this->select("SELECT name FROM sqlite_master WHERE type='table';"),
 			function($row,$item) { if($item['name']!="sqlite_sequence") $row[] = $item['name']; return $row; },array());

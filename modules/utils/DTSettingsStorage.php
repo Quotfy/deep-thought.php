@@ -36,8 +36,9 @@ class DTSettingsStorage extends DTSettings{
 	protected static $_storage_connections = array(); //internal storage for singleton storage connections
 	protected static $_default_store;
 	
-	public static function initShared(string $path){
-		return static::$shared_storage = new static(json_decode(file_get_contents($path)));
+	public static function initShared($path){
+		static::$_storage_connections = array(); //clear this out for new storage
+		return static::$shared_storage = json_decode(file_get_contents($path),true);
 	}
 	
 	public static function &sharedSettings(array $settings=null){
@@ -55,10 +56,10 @@ class DTSettingsStorage extends DTSettings{
 	 * @retval DTStore a valid connection or throws an exception
 	 */
 	public static function connect($store){
-		if(!isset(static::$_storage_connections[$store])){
+		if(!isset(static::$_storage_connections[$store]) || static::$_storage_connections[$store]->conn==null){
 			$storage = static::sharedSettings();
 			if(!isset($storage,$storage[$store]))
-				throw new Exception("Connection '{$store}' not found in storage!");
+				throw new \Exception("Connection '{$store}' not found in storage!");
 			$connector = $storage[$store]["connector"];
 			$dsn = $storage[$store]["dsn"];
 			$readonly = isset($storage[$store]["readonly"])?$storage[$store]["readonly"]:false;

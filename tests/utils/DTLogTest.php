@@ -38,6 +38,6 @@ class DTLogTest extends \PHPUnit_Framework_TestCase{
 		$obj = array("test"=>"success");
 		$info_msg = DTLog::info("The contents of %s look correct",$obj);
 		DTLog::info($info_msg);
-		$this->assertTrue(strpos($info_msg,"{\"test\":\"success\"}")!=false);
+		$this->assertTrue(preg_match("/The contents of .*{\"test\":\"success\"}.* look correct/",$info_msg)!=false);
 	}
 }

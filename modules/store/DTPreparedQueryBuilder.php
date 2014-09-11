@@ -43,15 +43,6 @@ class DTPreparedQueryBuilder extends DTQueryBuilder{
 	
 	/** if +filter+ is set, it is appended to +where_clause+ using AND */
 	public function buildWhereClausePrepared(&$prep_vals=array()){
-		/*$wc = $this->where_clause;
-		if(isset($this->filter) && count($this->filter)>0){
-			return $wc ." AND ". implode(" AND ",array_map(function($k,$v) use (&$prep_vals){
-				if(is_array($v)) //in the case of an array, the elements are [op,exp]
-					return "{$k} {$v[0]} ".$this->db->placeholder($prep_vals,$v[1]);
-				return "{$k}=".$this->db->placeholder($prep_vals,$v);
-			},array_keys($this->filter),$this->filter));
-		}
-		return $wc;*/
 		$wc = (!empty($this->enforce)?"({$this->enforce}) AND ":"")."({$this->where_clause})"; //ALWAYS wrap the where clause, or it conflicts with enforce (e.g. [enforcer] and "name like 'a' OR name like 'b'")
 		if(isset($this->filter) && count($this->filter)>0){
 			return $wc ." AND ". implode(" AND ",array_map(function($k,$v) use (&$prep_vals){
@@ -79,7 +70,7 @@ class DTPreparedQueryBuilder extends DTQueryBuilder{
 		$this->limit("1");
 		$stmt = $this->selectStatement($cols);
 		if(!isset(static::$prepared_statements[$stmt_name]))
-				static::$prepared_statements[$stmt_name] = $this->db->prepare($stmt,$stmt_name);
+				static::$prepared_statements[$stmt_name] = $this->db->prepareStatement($stmt,$stmt_name);
 		$rows = $this->db->execute(static::$prepared_statements[$stmt_name],$this->prep_vals);
 		if(count($rows)>0){
 			return $rows[0];
@@ -103,7 +94,7 @@ class DTPreparedQueryBuilder extends DTQueryBuilder{
 			$set_str = implode(",",array_map(function($k,$v) use (&$prep_vals){return "{$k}=".$this->db->placeholder($prep_vals,$v);},array_keys($properties),$properties));
 			$stmt = "UPDATE {$this->from_clause} SET {$set_str} WHERE ".$this->buildWhereClausePrepared($prep_vals);
 			if(!isset(static::$prepared_statements[$stmt_name]))
-				static::$prepared_statements[$stmt_name] = $this->db->prepare($stmt,$stmt_name);
+				static::$prepared_statements[$stmt_name] = $this->db->prepareStatement($stmt,$stmt_name);
 			$this->db->execute(static::$prepared_statements[$stmt_name],$prep_vals);
 			return true;
 		}
@@ -119,8 +110,9 @@ class DTPreparedQueryBuilder extends DTQueryBuilder{
 			$vals_str = implode(",",array_map(function($v) use (&$prep_vals){return $this->db->placeholder($prep_vals,$v);},array_values($properties)));
 			$stmt = "INSERT INTO {$this->from_clause} ({$cols_str}) VALUES ({$vals_str});";
 			if(!isset(static::$prepared_statements[$stmt_name]))
-				static::$prepared_statements[$stmt_name] = $this->db->prepare($stmt,$stmt_name);
-			return  $this->db->execute_insert(static::$prepared_statements[$stmt_name],$prep_vals);
+				static::$prepared_statements[$stmt_name] = $this->db->prepareStatement($stmt,$stmt_name);
+			$this->db->execute(static::$prepared_statements[$stmt_name],$prep_vals);
+			return $this->db->lastInsertID();
 		}
 		return false;
 	}

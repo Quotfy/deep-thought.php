@@ -42,7 +42,7 @@ class DTSettings{
 	 *	@param string $path the path to the shared settings
 	 *	@retval DTSettings the shared settings
 	*/
-	public static function initShared(string $path){
+	public static function initShared($path){
 		return static::$shared_settings = new static(json_decode(file_get_contents($path)));
 	}
 	

@@ -1,5 +1,37 @@
-<?php
-class DTPgSQLDatabase extends DTDatabase{
+<?php namespace ExpressiveAnalytics\DeepThought;
+/**
+ * DTPgSQLDatabase
+ *
+ * Copyright (c) 2013-2014, Expressive Analytics, LLC <info@expressiveanalytics.com>.
+ * All rights reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
+ * @package    Deep Thought
+ * @author     Blake Anderson <blake@expressiveanalytics.com>
+ * @copyright  2013-2014 Expressive Analytics, LLC <info@expressiveanalytics.com>
+ * @license    http://choosealicense.com/licenses/mit
+ * @link       http://www.expressiveanalytics.com/
+ * @since      version 1.0.0
+ */
+ 
+class DTPgSQLDatabase extends DTStore{
 	public $ilike = "ILIKE";
 
 	public function connect($dsn){
@@ -8,9 +40,9 @@ class DTPgSQLDatabase extends DTDatabase{
 		$pass = $parts["pass"];
 		$host = $parts["host"];
 		$db = substr($parts["path"],1); //omit starting slash
-		$this->conn = pg_connect("host={$host} dbname={$db} user={$user} password={$pass}");
+		$this->conn = @pg_connect("host={$host} dbname={$db} user={$user} password={$pass}");
 		if(!$this->conn)
-			DTLog::error("DTPgSQL:connect_error:host={$host} dbname={$db} user={$user}");
+			throw new \Exception(DTLog::colorize("Could not connect to PostgreSQL.","error")."\ndatabase: host={$host} dbname={$db} user={$user}");
 		@pg_set_client_encoding($this->conn, "UTF8");
 	}
 	
@@ -38,6 +70,7 @@ class DTPgSQLDatabase extends DTDatabase{
 	
 	public function disconnect(){
 		@pg_close($this->conn);
+		$this->conn = null;
 	}
 	
 	public function lastInsertID(){
@@ -58,14 +91,24 @@ class DTPgSQLDatabase extends DTDatabase{
 		return "\${$i}";
 	}
 	
-	public function prepare($query,$name=null){
+	
+	/**
+	 * prepare a statement.
+	 * 
+	 * @access public
+	 * @param string $query
+	 * @param string $name (default: null) the name of the statement, or a randomly generated name
+	 * @return mixed the name or object to pass to the first arguement of execute()
+	 */
+	public function prepareStatement($stmt,&$name=null){
 		$name = isset($name)?$name:"DT_prepared_".rand();
-		pg_prepare($this->conn, $name, $query);
+		if(@pg_prepare($this->conn, $name, $stmt)===false)
+			throw new \Exception(DTLog::colorize(pg_last_error(),"error"));
 		return $name;
 	}
 	
 	public function execute($stmt,$params=array()){
-		$result = pg_execute($this->conn,$stmt,$params);
+		$result = @pg_execute($this->conn,$stmt,$params);
 		if($result===false)
 			DTLog::error("Query failed:".pg_last_error()."\n{$stmt}");
 		$rows = pg_fetch_all($result);
@@ -73,11 +116,6 @@ class DTPgSQLDatabase extends DTDatabase{
 			$rows = array();
 		}
 		return $rows;
-	}
-	
-	public function execute_insert($name,$params){
-		$this->execute($name,$params);
-		return $this->lastInsertID();
 	}
 	
 	public function columnsForTable($table){

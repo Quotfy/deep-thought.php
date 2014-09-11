@@ -1,5 +1,4 @@
-<?php
-require_once dirname(__FILE__)."/../../ducktape.inc.php";
+<?php namespace ExpressiveAnalytics\DeepThought;
 /**
  * DTQueryBuilder
  *
@@ -166,8 +165,6 @@ class DTQueryBuilder{
 	}
 	
 	public function selectStatement($cols="*"){
-		/*if(!isset($this->from_clause))
-			throw new Exception("No table specified.");*/
 		$column_clause = $cols;
 		if(count($this->columns)>0)
 			$column_clause .= ", ".implode(",",array_map(function($k,$v){return "{$v} as {$k}";},array_keys($this->columns),$this->columns));
@@ -235,16 +232,16 @@ class DTQueryBuilder{
 	public static function formatValue($v){
 		if(!isset($v)||$v==="NULL")
 			return "NULL";
-		else if(is_array($v)) //@todo for now we just serialize any second-level objects
-			return "'".json_encode(DTResponse::objectAsRenderable($v))."'";
+		else if(is_array($v))
+			return "'".json_encode($v)."'";
+			//return "'".json_encode(DTResponse::objectAsRenderable($v))."'";
 		else if(substr($v,0,11)=="\\DTSQLEXPR\\") //handle expressions as literals, as long as params are cleaned, this should never be possible from users because of the unescaped backslash
 			return substr($v,11);
-		return "'{$v}'"; // ALWAYS quote other values to avoid 'id=1 OR 1=1' attacks
+		return "'".(string)$v."'"; // ALWAYS quote other values to avoid 'id=1 OR 1=1' attacks
 	}
 	
 	// this gives an idea of what the QB is all about... for debugging
 	public function __toString(){
 		return $this->selectStatement();
-		//return "... {$this->join_clause} WHERE ".$this->buildWhereClause()." {$this->group_by} {$this->having_clause} {$this->order_by} {$this->limit_clause}";
 	}
 }

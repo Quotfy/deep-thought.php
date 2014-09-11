@@ -92,7 +92,7 @@ class DTLog{
 		$bt = debug_backtrace();
 		$file = basename($bt[1]["file"]);
 		$line = $bt[1]["line"];
-		$timestamp = date("D M d H:i:s Y");
+		$timestamp = gmdate("D M d H:i:sP Y");
 		$msg = is_string($msg)?$msg:json_encode($msg);
 		flock($fp,LOCK_EX);
 		if(static::isCLI()) //wrap with log text
@@ -122,7 +122,7 @@ class DTLog{
 		return fopen($file,"a");
 	}
 	
-	public static function colorize($text, $status) {
+	public static function colorize($text, $status="INFO") {
 		$out = "";
 		$cli = static::isCLI();
 		$status = strtoupper($status);
