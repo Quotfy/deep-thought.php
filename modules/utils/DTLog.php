@@ -93,7 +93,7 @@ class DTLog{
 		$line = $bt[1]["line"];
 		$timestamp = gmdate("D M d H:i:sP Y");
 		$msg = is_string($msg)?$msg:json_encode($msg);
-		flock($fp,LOCK_EX);
+		flock($fp,LOCK_EX | LOCK_NB);
 		$meta = stream_get_meta_data($fp);
 		if($meta["wrapper_type"]!="PHP" || static::isCLI()){ //wrap with log text
 			$msg = preg_replace("/<dt-color color=green>/",chr(27)."[42m",$msg);
