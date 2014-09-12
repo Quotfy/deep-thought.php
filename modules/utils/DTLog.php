@@ -100,7 +100,7 @@ class DTLog{
 			$msg = preg_replace("/<dt-color color=red>/",chr(27)."[41m",$msg);
 			$msg = preg_replace("/<dt-color color=yellow>/",chr(27)."[43m",$msg);
 			$msg = preg_replace("/<dt-color color=blue>/",chr(27)."[44m",$msg);
-			$msg = preg_replace("/<\/dt-color>/",chr(27)."[0m");
+			$msg = preg_replace("/<\/dt-color>/",chr(27)."[0m",$msg);
 			$msg = "[{$timestamp}] {$file}:{$line}:{$msg}\n";
 		}else{
 			$msg = preg_replace("/<dt-color color=green>/","<span style='background-color: green'>",$msg);
