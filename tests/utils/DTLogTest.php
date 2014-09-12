@@ -9,7 +9,8 @@ class DTLogTest extends \PHPUnit_Framework_TestCase{
 	
 	public function testDebug(){
 		DTLog::$debug_fp = fopen("/dev/null","w");
-		$debug_msg = DTLog::debug("Testing stdout for debug log...",$backtrace);
+		DTLog::debug("Testing stdout for debug log...");
+		$debug_msg = DTLog::lastBacktrace();
 		$this->assertTrue(strpos($debug_msg, "Testing stdout for debug log...")!=false);
 		$this->assertNotNull($backtrace,"Expected backtrace to be returned.");
 	}

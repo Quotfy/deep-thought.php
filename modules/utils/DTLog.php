@@ -35,7 +35,7 @@ class DTLog{
 	public static $error_fp = null; ///destination for error messages
 	public static $info_fp = null; ///destination for info messages
 	public static $debug_fp = null; ///destination for debug messages
-	public $is_stdout = false;
+	public static $last_backtrace = null;
 	
 	/** emit major failure message */
 	public static function error($msg){
@@ -59,12 +59,12 @@ class DTLog{
 	}
 	
 	/** only emits message if debug */
-	public static function debug($msg,&$backtrace=null){
+	public static function debug($msg){
 		if(!isset(DTLog::$debug_fp))
 			DTLog::$debug_fp = static::openOrCreate("debug_log");;
 		$fmt_msg = static::formatMessage(func_get_args());
 		$e = new \Exception();
-		$backtrace = $e->getTraceAsString();
+		static::$last_backtrace = $e->getTraceAsString();
 		return DTLog::write(DTLog::$debug_fp,$fmt_msg);
 	}
 	
@@ -134,35 +134,6 @@ class DTLog{
 		return fopen($file,"a");
 	}
 	
-	/*public static function colorize($text, $status="INFO") {
-		$out = "";
-		$cli = static::isCLI();
-		$status = strtoupper($status);
-		switch($status) {
-			case "SUCCESS":
-				$out = $cli?"[42m":"green";
-				break;
-			case "FAILURE":
-			case "ERROR":
-				$out = $cli?"[41m":"red";
-				break;
-			case "WARN":
-			case "WARNING":
-				$out = $cli?"[43m":"yellow";
-				break;
-			case "NOTE":
-			case "INFO":
-				$out = $cli?"[44m":"lightblue";
-				break;
-			default:
-				throw new \Exception("Invalid status: " . $status);
-		}
-		if($cli)
-			return chr(27)."{$out}{$text}".chr(27)."[0m";
-		else
-			return "<span style='background:{$out}'>{$text}</span>";
-	}*/
-	
 	public static function colorize($text, $status="INFO") {
 		$out = "";
 		$status = strtoupper($status);
@@ -191,5 +162,9 @@ class DTLog{
 	public static function isCLI(){
 		$sapi_type = php_sapi_name();
 		return (substr($sapi_type, 0, 3) == 'cli');
+	}
+	
+	public static function lastBacktrace(){
+		return static::$last_backtrace;
 	}
 }
