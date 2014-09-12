@@ -35,7 +35,7 @@ class DTSettingsConfig extends DTSettings{
 	public static $shared_config = array();
 	
 	public static function initShared($path){
-		return static::$shared_config = json_decode(file_get_contents($path));
+		return static::$shared_config = json_decode(file_get_contents($path),true);
 	}
 	
 	public static function &sharedSettings(array $settings=null){
