@@ -5,8 +5,9 @@ A highly versatile framework for attaching advanced object functionality to both
 
 ## Getting Started
 
-The easiest way to get started with DeepThought is by using Composer. Add the following to **composer.json** at the top level of your project:
+The easiest way to get started with DeepThought is by using Composer.
 
+Add the following to **composer.json** at the top level of your project:
 ```
 {
  "require":{
@@ -24,7 +25,7 @@ php composer.phar install
 
 That's it! If you want to try it out, run the following command:
 ```
-php -r "require('vendor/autoload.php'); DTLog::debug('Nice work.');"
+php -r "require('vendor/autoload.php'); DTLog::debug('That was too easy!');"
 ```
 
 ### Adding Modules
@@ -37,7 +38,7 @@ For example:
 {
  "require":{
   "expressive-analytics/deep-thought": "dev-master"
-  "expressive-analytics/deep-thought/store-mysql": "dev-master"
+  "expressive-analytics/deep-thought-consumer": "dev-master"
  }
 }
 ```
