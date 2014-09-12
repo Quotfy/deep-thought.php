@@ -35,6 +35,7 @@ class DTLog{
 	public static $error_fp = null; ///destination for error messages
 	public static $info_fp = null; ///destination for info messages
 	public static $debug_fp = null; ///destination for debug messages
+	public $is_stdout = false;
 	
 	/** emit major failure message */
 	public static function error($msg){
@@ -93,8 +94,21 @@ class DTLog{
 		$timestamp = gmdate("D M d H:i:sP Y");
 		$msg = is_string($msg)?$msg:json_encode($msg);
 		flock($fp,LOCK_EX);
-		if($fp!=STDOUT || static::isCLI()) //wrap with log text
+		$meta = stream_get_meta_data($fp);
+		if($meta["wrapper_type"]!="PHP" || static::isCLI()){ //wrap with log text
+			$msg = preg_replace("/<dt-color color=green>/",chr(27)."[42m",$msg);
+			$msg = preg_replace("/<dt-color color=red>/",chr(27)."[41m",$msg);
+			$msg = preg_replace("/<dt-color color=yellow>/",chr(27)."[43m",$msg);
+			$msg = preg_replace("/<dt-color color=blue>/",chr(27)."[44m",$msg);
+			$msg = preg_replace("/<\/dt-color>/",chr(27)."[0m");
 			$msg = "[{$timestamp}] {$file}:{$line}:{$msg}\n";
+		}else{
+			$msg = preg_replace("/<dt-color color=green>/","<span style='background-color: green'>",$msg);
+			$msg = preg_replace("/<dt-color color=red>/","<span style='background-color: red'>",$msg);
+			$msg = preg_replace("/<dt-color color=yellow>/","<span style='background-color: yellow'>",$msg);
+			$msg = preg_replace("/<dt-color color=blue>/","<span style='background-color: lightblue'>",$msg);
+			$msg = preg_replace("/<\/dt-color>/","</span>",$msg);
+		}
 		if(fwrite($fp,$msg)===false)
 			error_log("DTLog::write():Could not write to log!");
 		flock($fp,LOCK_UN);
@@ -120,7 +134,7 @@ class DTLog{
 		return fopen($file,"a");
 	}
 	
-	public static function colorize($text, $status="INFO") {
+	/*public static function colorize($text, $status="INFO") {
 		$out = "";
 		$cli = static::isCLI();
 		$status = strtoupper($status);
@@ -138,7 +152,7 @@ class DTLog{
 				break;
 			case "NOTE":
 			case "INFO":
-				$out = $cli?"[44m":"blue";
+				$out = $cli?"[44m":"lightblue";
 				break;
 			default:
 				throw new \Exception("Invalid status: " . $status);
@@ -147,6 +161,31 @@ class DTLog{
 			return chr(27)."{$out}{$text}".chr(27)."[0m";
 		else
 			return "<span style='background:{$out}'>{$text}</span>";
+	}*/
+	
+	public static function colorize($text, $status="INFO") {
+		$out = "";
+		$status = strtoupper($status);
+		switch($status) {
+			case "SUCCESS":
+				$out = "green";
+				break;
+			case "FAILURE":
+			case "ERROR":
+				$out = "red";
+				break;
+			case "WARN":
+			case "WARNING":
+				$out = "yellow";
+				break;
+			case "NOTE":
+			case "INFO":
+				$out = "blue";
+				break;
+			default:
+				throw new \Exception("Invalid status: " . $status);
+		}
+		return "<dt-color color={$out}>{$text}</dt-color>";
 	}
 	
 	public static function isCLI(){
