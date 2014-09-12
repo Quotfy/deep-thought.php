@@ -93,7 +93,7 @@ class DTLog{
 		$timestamp = gmdate("D M d H:i:sP Y");
 		$msg = is_string($msg)?$msg:json_encode($msg);
 		flock($fp,LOCK_EX);
-		if(static::isCLI()) //wrap with log text
+		if($fp!=STDOUT || static::isCLI()) //wrap with log text
 			$msg = "[{$timestamp}] {$file}:{$line}:{$msg}\n";
 		if(fwrite($fp,$msg)===false)
 			error_log("DTLog::write():Could not write to log!");
