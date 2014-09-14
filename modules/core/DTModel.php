@@ -153,7 +153,7 @@ class DTModel implements arrayaccess {
 		return array_merge($public_params,$defaults);
 	}
 	
-	public function storageProperties(DTDatabase $db,array $defaults=array(),$purpose=null){
+	public function storageProperties(DTStore $db,array $defaults=array(),$purpose=null){
 		$storage_params = array();
 		$cols = $db->columnsForTable(static::$storage_table);
 		if(count($cols)==0)
@@ -168,7 +168,7 @@ class DTModel implements arrayaccess {
 	/**
 		cleans properties in preparation for storage
 	*/
-	public function clean(DTDatabase $db=null){
+	public function clean(DTStore $db=null){
 		$db = isset($db)?$db:$this->db;
 		$p = new DTParams($this->storageProperties($db,array(),"reinsertion"));
 		$clean = $p->allParams();
@@ -202,7 +202,7 @@ class DTModel implements arrayaccess {
 		convenience method for basic inserts based on storageProperties()
 		@return returns the inserted id, or false if nothing was inserted
 	*/
-	public function insert(DTDatabase $db=null,DTQueryBuilder $qb=null){
+	public function insert(DTStore $db=null,DTQueryBuilder $qb=null){
 		$db = (isset($db)?$db:$this->db);
 		$this->setStore($db);
 		$qb = (isset($qb)?$qb:new DTQueryBuilder($db)); //allow the query builder to be passed, in case it's a subclass
@@ -215,7 +215,7 @@ class DTModel implements arrayaccess {
 		convenience method for basic updates based on storageProperties()
 		@note uses the object's id property for where-clause, unless query-builder is passed
 	*/
-	public function update(DTDatabase $db=null,$qb=null){
+	public function update(DTStore $db=null,$qb=null){
 		$db = (isset($db)?$db:$this->db);
 		$qb = isset($qb)?$qb:$db->filter(array(static::$primary_key_column=>$this[static::$primary_key_column]));
 		$properties = $this->storageProperties($db,array(),"update");
@@ -226,7 +226,7 @@ class DTModel implements arrayaccess {
 		delete the object in storage
 		@param qb - this determines what is matched for delete, defaults to primary-key column
 	*/
-	public function delete(DTDatabase $db=null,$qb=null){
+	public function delete(DTStore $db=null,$qb=null){
 		$db = (isset($db)?$db:$this->db);
 		$qb = isset($qb)?$qb:$db->where(static::$primary_key_column."='".$this[static::$primary_key_column]."'");
 		return $qb->from(static::$storage_table)->delete();
