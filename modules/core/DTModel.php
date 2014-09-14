@@ -331,6 +331,8 @@ class DTModel implements arrayaccess {
 	
 	// from http://stackoverflow.com/questions/2690504/php-producing-relative-date-time-from-timestamps
 	public static function relativeTime($ts){
+		if($ts=="")
+			return "";
 		if(!ctype_digit($ts))
 	        $ts = strtotime($ts);
 
