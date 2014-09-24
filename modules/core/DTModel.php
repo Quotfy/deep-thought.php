@@ -54,7 +54,7 @@ class DTModel implements arrayaccess {
     	}else if($paramsOrQuery instanceof DTQueryBuilder){ //grab the parameters from storage
     		$this->db=$paramsOrQuery->db; //save where we came from
     		if(isset(static::$storage_table))
-	    		$properties = $paramsOrQuery->from(static::$storage_table." ".get_called_class())->select1();
+	    		$properties = $paramsOrQuery->from(static::$storage_table." ".get_called_class())->select1(get_called_class().".*");
 	    	if(!isset($properties))
     			throw new Exception("Failed to find ".get_called_class()." in storage.",1);
     	}
