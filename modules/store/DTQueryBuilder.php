@@ -66,13 +66,15 @@ class DTQueryBuilder{
 			return $wc ." AND ". implode(" AND ",array_map(function($k,$v){
 				if($v===null) //handle null-matching
 					return "{$k} IS NULL";
-				if(is_array($v)){ //in the case of an array, the elements are [op,exp]
+				if(is_array($v)){ //in the case of an array, the elements are [op,exp,txfunc]
 					if(is_array($v[1]))
 						$val = "(".implode(",",array_map(function($v){return DTQueryBuilder::formatValue($v);},$v[1])).")";
 					else if($v[1]=="NULL")
 						$val = "NULL";
 					else
 						$val = DTQueryBuilder::formatValue($v[1]);
+					if(isset($v[2])) //check for transform function
+						$val = $v[2]."(".$val.")";
 					return "{$k} {$v[0]} {$val}";
 				}
 				return "{$k}=".DTQueryBuilder::formatValue($v);

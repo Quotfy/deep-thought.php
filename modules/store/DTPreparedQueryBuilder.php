@@ -55,6 +55,8 @@ class DTPreparedQueryBuilder extends DTQueryBuilder{
 						$val = "NULL";
 					else
 						$val = $this->db->placeholder($prep_vals,$v[1]);
+					if(isset($v[2])) //check for transform function
+						throw new Exception("Transformation functions are not allow in prepared statements!");
 					return "{$k} {$v[0]} {$val}";
 				}
 				return "{$k}=".$this->db->placeholder($prep_vals,$v);
