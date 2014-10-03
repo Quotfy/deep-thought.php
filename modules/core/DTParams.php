@@ -118,19 +118,24 @@ class DTParams{
 //====================
 	public static function parseBool($val){
 		if(is_bool($val)) return $val;
-		if(is_string($val)) $val = trim(strtolower($val));
+		if(is_string($val))
+			$val = trim(strtolower($val));
+		else
+			return $val==true;
 		switch($val){
 			case "true":
 			case "t":
 			case "yes":
 			case "y":
 			case "on":
+			case "1":
 				return true;
 			case "false":
 			case "f":
 			case "no":
 			case "n":
 			case "off":
+			case "0":
 				return false;
 		}
 		return null;
