@@ -186,7 +186,7 @@ class DTModel implements arrayaccess {
 		$cols = $this->db->columnsForTable(static::$storage_table);
 		$updated = 0;
 		foreach($params as $k=>$v){
-			if($k!="id" && ($this[$k]!=$v || $this[$k]=="")){
+			if($k!=static::$primary_key_column && ($this[$k]!=$v || $this[$k]==="")){
 				if(in_array($k, $cols)){ //ignore properties that don't affect storage
 					$changes["old"][$k] = $this[$k];
 					$changes["new"][$k] = $v;
@@ -301,6 +301,8 @@ class DTModel implements arrayaccess {
 	/** Two-way encryption method (use decode() to reverse the encoding)
 		- from the PHP mcrypt docs (http://docs.php.net/manual/en/function.mcrypt-encrypt.php) */
 	public static function encode($str,$salt){
+		if($str=="")
+			return null;
 	    $key = pack('H*', $salt);
 	
 	    # create a random IV to use with CBC encoding
