@@ -173,8 +173,8 @@ class DTQueryBuilder{
 		return "SELECT {$column_clause} FROM {$this->from_clause} {$this->join_clause} WHERE ".$this->buildWhereClause()." {$this->group_by} {$this->having_clause} {$this->order_by} {$this->limit_clause}";
 	}
 	
-	public function count(){
-		$stmt = $this->selectStatement("COUNT(*) as count");
+	public function count($cols="*"){
+		$stmt = $this->nestAs($cols,"dt_countable")->selectStatement("COUNT(*) as count");
 		$row = $this->db->select1($stmt);
 		return $row["count"];
 	}

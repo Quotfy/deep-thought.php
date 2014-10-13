@@ -261,12 +261,13 @@ class DTModel implements arrayaccess {
 		}
 	}
 	
-	public static function select(DTQueryBuilder $qb,$cols="*"){
+	public static function select(DTQueryBuilder $qb,$cols=null){
+		$cols = isset($cols)?$cols:get_called_class().".*";
 		return $qb->from(static::$storage_table." ".get_called_class())->selectAs(get_called_class(),$cols);
 	}
 	
 	public static function count(DTQueryBuilder $qb){
-		return $qb->from(static::$storage_table." ".get_called_class())->count();
+		return $qb->from(static::$storage_table." ".get_called_class())->count(get_called_class().".*");
 	}
 	
 	public static function sum(DTQueryBuilder $qb,$col){
