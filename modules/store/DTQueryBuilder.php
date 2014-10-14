@@ -166,6 +166,11 @@ class DTQueryBuilder{
 		return $this->db->select($stmt);
 	}
 	
+	public function selectKV($cols="*"){
+		$stmt = $this->selectStatement($cols);
+		return $this->db->selectKV($stmt);
+	}
+	
 	public function selectStatement($cols="*"){
 		$column_clause = $cols;
 		if(count($this->columns)>0)
