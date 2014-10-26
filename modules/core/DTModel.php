@@ -279,7 +279,7 @@ class DTModel implements arrayaccess {
 	}
 	
 	public static function deleteRows(DTQueryBuilder $qb){
-		return $qb->from(static::$storage_table." ".get_called_class())->delete();
+		return $qb->from(static::$storage_table)->delete();
 	}
 	
 	public static function byID($db,$id,$cols="*"){
@@ -382,5 +382,26 @@ class DTModel implements arrayaccess {
 
 	public function __toString(){
 		return json_encode($this->publicProperties());
+	}
+	
+	public function belongsTo($class,$column){
+		try{
+			return new $class($this->db->filter(array($class::$primary_key_column=>$this[$column])));
+		}catch(Exception $e){
+			DTLog::error($e->getMessage());
+		}
+		return null;
+	}
+	
+	public function hasMany($class,$column){
+		return $class::select($this->db->filter(array($column=>$this->primary_key_column)));
+	}
+	
+	public function nameFrom($class,$by,$column="name"){
+		try{
+			$obj = $this->belongsTo($class,$by);
+				return $obj[$column];
+		}catch(Exception $e){}
+		return "";
 	}
 }
