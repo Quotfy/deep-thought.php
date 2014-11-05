@@ -31,7 +31,7 @@
  * @since      version 1.0.0
  */
 
-class DTParams{
+class DTParams implements arrayaccess{
 	protected $params;
 	public $db;
 
@@ -39,6 +39,23 @@ class DTParams{
 		$this->params = isset($params)?$params:$_REQUEST;
 		$this->db = isset($db)?$db:DTSettingsStorage::defaultStore();
 	}
+	
+	public function offsetSet($offset, $value) {
+    	if (is_null($offset))
+            $this->params[] = $value; 
+        else
+			$this->params[$offset] = $value;
+        return $value;
+    }
+    public function offsetExists($offset) {
+        return isset($this->params[$offset]);
+    }
+    public function offsetUnset($offset) {
+        unset($this->params[$offset]);
+    }
+    public function offsetGet($offset) {
+    	return $this->params[$offset];
+    }
 	
 //======================
 //! Parameter Handling
