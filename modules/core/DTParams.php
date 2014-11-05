@@ -31,7 +31,7 @@
  * @since      version 1.0.0
  */
 
-class DTParams extends DTModel{
+class DTParams implements arrayaccess{
 	protected $params;
 	public $db;
 
@@ -39,6 +39,14 @@ class DTParams extends DTModel{
 		$this->params = isset($params)?$params:$_REQUEST;
 		$this->db = isset($db)?$db:DTSettingsStorage::defaultStore();
 	}
+	
+	public function offsetSet($offset, $value) {
+    	if (is_null($offset))
+            $this->params[] = $value; 
+        else
+			$this->params[$offset] = $value;
+        return $value;
+    }
 	
 //======================
 //! Parameter Handling
