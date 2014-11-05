@@ -31,7 +31,7 @@
  * @since      version 1.0.0
  */
 
-class DTParams{
+class DTParams extends DTModel{
 	protected $params;
 	public $db;
 
