@@ -394,7 +394,7 @@ class DTModel implements arrayaccess {
 	}
 	
 	public function hasMany($class,$column){
-		return $class::select($this->db->filter(array($column=>$this->primary_key_column)));
+		return $class::select($this->db->filter(array($column=>static::$primary_key_column)));
 	}
 	
 	public function nameFrom($class,$by,$column="name"){
