@@ -53,8 +53,10 @@ class DTModel implements arrayaccess {
 			$properties = $paramsOrQuery;
     	}else if($paramsOrQuery instanceof DTQueryBuilder){ //grab the parameters from storage
     		$this->db=$paramsOrQuery->db; //save where we came from
-    		if(isset(static::$storage_table))
-	    		$properties = $paramsOrQuery->from(static::$storage_table." ".get_called_class())->select1(get_called_class().".*");
+    		if(isset(static::$storage_table)){
+    			$paramsOrQuery = static::selectQB($paramsOrQuery);
+	    		$properties = $paramsOrQuery->select1("*, ".get_called_class().".".static::$primary_key_column);
+	    	}
 	    	if(!isset($properties))
     			throw new Exception("Failed to find ".get_called_class()." in storage.",1);
     	}
@@ -261,9 +263,15 @@ class DTModel implements arrayaccess {
 		}
 	}
 	
+	/** called during instantiation from storage--override to modify QB */
+	public static function selectQB($qb){
+		return $qb->from(static::$storage_table." ".get_called_class());
+	}
+	
 	public static function select(DTQueryBuilder $qb,$cols=null){
-		$cols = isset($cols)?$cols:get_called_class().".*";
-		return $qb->from(static::$storage_table." ".get_called_class())->selectAs(get_called_class(),$cols);
+		static::selectQB($qb);
+		$cols = isset($cols)?$cols:"*, ".get_called_class().".".static::$primary_key_column;
+		return $qb->selectAs(get_called_class(),$cols);
 	}
 	
 	public static function count(DTQueryBuilder $qb){
@@ -403,5 +411,9 @@ class DTModel implements arrayaccess {
 				return $obj[$column];
 		}catch(Exception $e){}
 		return "";
+	}
+	
+	public static function joinSubclassProperties($qb,$table,$col){
+		return $qb->join($table,get_called_class().".".static::$primary_key_column."={$table}.{$col}");
 	}
 }
