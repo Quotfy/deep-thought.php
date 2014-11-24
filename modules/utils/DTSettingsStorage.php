@@ -73,9 +73,12 @@ class DTSettingsStorage extends DTSettings{
 	 * 
 	 * @access public
 	 * @static
+	 * @param DTStore optionally sets the default store
 	 * @return DTStore the default store
 	 */
-	public static function defaultStore(){
+	public static function defaultStore(DTStore $default=null){
+		if(isset($default))
+			return static::$_default_store=$default;
 		if(!isset(static::$_default_store)){
 			$storage = static::sharedSettings();
 			if($storage==null)

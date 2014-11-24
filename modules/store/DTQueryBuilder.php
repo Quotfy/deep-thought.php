@@ -83,15 +83,16 @@ class DTQueryBuilder{
 		return $wc;
 	}
 	
-	public function filter(Array $params=array()){
+	/**
+		if $params is null, returns the current filter	
+	*/
+	public function filter(Array $params=null){
+		if(!isset($params))
+			return $this->filter;
 		if(!isset($this->filter))
 			$this->filter = array();
 		$this->filter = array_merge($this->filter,$params);
 		return $this;
-	}
-	
-	public function describeFilter(){
-		return $this->filter;
 	}
 	
 	/** this is a special override of filter() and where() to make sure that enforcers have the final say in the filtering */

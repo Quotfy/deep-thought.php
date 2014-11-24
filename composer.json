@@ -26,6 +26,7 @@
     		"modules/store-sqlite",
     		"modules/store-mysql",
     		"modules/store-pgsql",
+    		"modules/tests",
     		"modules/core"]
     }
 }
