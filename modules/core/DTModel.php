@@ -193,6 +193,8 @@ class DTModel implements arrayaccess {
 			$link = explode(".",$c);
 			$model = $link[0];
 			$col = $model::columnForModel($last_model); //a_id
+			if(count($link)>1 && $col==$model::$primary_key_column)
+		    	$col=$link[1];
 			$key = $model::$primary_key_column; //id
 			
 			$arr = array();
@@ -220,7 +222,6 @@ class DTModel implements arrayaccess {
 	    $link = explode(".",$chain[count($chain)-1]);
 	    $target_class = $link[0];
 		$key = $target_class::$primary_key_column;
-		DTLog::debug($vals);
 		if(!isset($builder_f)){
 			$builder_f = function($out,$i) use ($key){
 				$out[] = is_array($i)?$i:array($key=>$i);
@@ -236,33 +237,42 @@ class DTModel implements arrayaccess {
 		$inserted = array();
 		array_unshift($chain,get_called_class());
 		while(count($chain)>1){
-			$link = explode(".",array_pop($chain));
-		    $model = $link[0];
-		    $link = explode(".",$chain[count($chain)-1]);
-		    $next_model = $link[0];
-
-			DTLog::debug(DTLog::colorize("{$model} => {$next_model}","warn"));		    
+			$link1 = explode(".",array_pop($chain));
+		    $model = $link1[0];
+		    $link2 = explode(".",$chain[count($chain)-1]);
+		    $next_model = $link2[0];
+		    //$col = count($link1)>1?$link1[1]:$model::columnForModel($next_model);
 		    $col = $model::columnForModel($next_model);
-		    $next_col= $next_model::columnForModel($model);
+		    if(count($link1)>1 && $col==$model::$primary_key_column)
+		    	$col=$link1[1];
+		    $next_col = count($link2)>1?$link2[1]:$next_model::columnForModel($model);
+		    /*$next_col = $next_model::columnForModel($model);
+		    if(count($link2)>1 && $col==$next_model::$primary_key_column)
+		    	$col=$link2[1];*/
+
+			DTLog::debug(DTLog::colorize("{$model}.{$col} => {$next_model}.{$next_col}","warn"));
 			$stale = $stale_sets[$model];
-			
+			$default_v = array_values($stale)[0];
+			DTLog::debug("stale: %s",$stale);
 			DTLog::debug("params: %s",$params);
 			$last_params = array();
 			foreach($params as $p){
 				$v = array_values($p)[0];
-				if($col!=$model::$primary_key_column){
+				// if $nextmodel hasMany $model, hook up col=>nextmodel.key
+				 if($col!=$model::$primary_key_column){
 					if(isset($stale[$v]))
 						$p[$col] = $stale[$v];
 					else //default (for new entries) is to link to the first entry from the previous table
-						$p[$col] = array_values($stale)[0];
+						$p[$col] = $default_v;
 				}
 				DTLog::debug($p);
 				$inserted[] = $obj = $model::upsert($this->db->filter($p),$p);
 				unset($stale[$obj[$model::$primary_key_column]]);
 				if($next_col!=$next_model::$primary_key_column)
-					$last_params[] = array($next_col=>$obj[$model::$primary_key_column]);
+					//$last_params[] = array($next_col=>$obj[$model::$primary_key_column]);
+					$last_params[] = array($next_col=>$obj[$col]);
 				else
-					$last_params[] = array($next_model::$primary_key_column=>$p[$col]);
+					$last_params[] = array($next_col=>$p[$col]);
 			}
 			if(count($stale)>0)
 				$model::deleteRows($this->db->filter(array($model::$primary_key_column=>array("IN",array_keys($stale)))));
@@ -641,6 +651,6 @@ class DTModel implements arrayaccess {
 			if($parts[0]==$model)
 				return $m[1];
 		}
-		return static::$primary_key_column; //we've to the relationship backward
+		return static::$primary_key_column; //we've got the relationship backward
 	}
 }
