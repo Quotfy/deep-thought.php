@@ -231,7 +231,6 @@ class DTModel implements arrayaccess {
 		$params = array_reduce($vals,$builder_f,array());
 		
 		$stale_sets = $this->closure($chain);
-		DTLog::debug($stale_sets);
 		
 		// do the chain of upserts
 		$inserted = array();
@@ -242,19 +241,10 @@ class DTModel implements arrayaccess {
 		    $link2 = explode(".",$chain[count($chain)-1]);
 		    $next_model = $link2[0];
 		    $col = count($link1)>1?$link1[1]:$model::columnForModel($next_model);
-		    /*$col = $model::columnForModel($next_model);
-		    if(count($link1)>1)// && $col==$model::$primary_key_column)
-		    	$col=$link1[1];*/
 		    $next_col = count($link2)>1?$link2[1]:$next_model::columnForModel($model);
-		    /*$next_col = $next_model::columnForModel($model);
-		    if(count($link2)>1 && $col==$next_model::$primary_key_column)
-		    	$col=$link2[1];*/
 
-			DTLog::debug(DTLog::colorize("{$model}.{$col} => {$next_model}.{$next_col}","warn"));
 			$stale = $stale_sets[$model];
 			$default_v = array_values($stale)[0];
-			DTLog::debug("stale: %s",$stale);
-			DTLog::debug("params: %s",$params);
 			$last_params = array();
 			foreach($params as $p){
 				$v = array_values($p)[0];
@@ -265,14 +255,9 @@ class DTModel implements arrayaccess {
 					else //default (for new entries) is to link to the first entry from the previous table
 						$p[$col] = $default_v;
 				}
-				DTLog::debug($p);
 				$inserted[] = $obj = $model::upsert($this->db->filter($p),$p);
 				unset($stale[$obj[$model::$primary_key_column]]);
-				if($next_col!=$next_model::$primary_key_column)
-					//$last_params[] = array($next_col=>$obj[$model::$primary_key_column]);
-					$last_params[] = array($next_col=>$obj[$col]);
-				else
-					$last_params[] = array($next_col=>$p[$col]);
+				$last_params[]=($next_col!=$next_model::$primary_key_column)?array($next_col=>$obj[$col]):array($next_col=>$p[$col]);
 			}
 			if(count($stale)>0)
 				$model::deleteRows($this->db->filter(array($model::$primary_key_column=>array("IN",array_keys($stale)))));
