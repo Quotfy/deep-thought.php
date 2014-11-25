@@ -4,7 +4,7 @@ class DTModelTest extends DTTestCase{
 		return $sql .= <<<END
 
 CREATE TABLE test_models (
-	id int PRIMARY KEY,
+	id integer PRIMARY KEY autoincrement,
 	name text,
 	status text
 );
@@ -12,12 +12,13 @@ INSERT INTO test_models (id,name,status) VALUES (1,'A1','FAILURE');
 INSERT INTO test_models (id,name,status) VALUES (2,'A2','SUCCESS');
 
 CREATE TABLE table_a (
-	id int PRIMARY KEY
+	id integer PRIMARY KEY autoincrement,
+	name text
 );
-INSERT INTO table_a (id) VALUES (1);
+INSERT INTO table_a (id,name) VALUES (1,'A1');
 
 CREATE TABLE table_b (
-	id int PRIMARY KEY,
+	id integer PRIMARY KEY autoincrement,
 	name text,
 	a_id int
 );
@@ -25,7 +26,7 @@ INSERT INTO table_b (id,name,a_id) VALUES (1,'B1',1);
 INSERT INTO table_b (id,name,a_id) VALUES (2,'B2',1);
 
 CREATE TABLE table_a_to_b (
-	id int PRIMARY KEY,
+	id integer PRIMARY KEY autoincrement,
 	name text,
 	a_id int,
 	b_id int
@@ -34,7 +35,7 @@ INSERT INTO table_a_to_b (id,name,a_id,b_id) VALUES (1,'AB1',1,1);
 INSERT INTO table_a_to_b (id,name,a_id,b_id) VALUES (2,'AB2',1,2);
 
 CREATE TABLE table_c (
-	id int PRIMARY KEY,
+	id integer PRIMARY KEY autoincrement,
 	name text,
 	b_id int	
 );
@@ -43,7 +44,7 @@ INSERT INTO table_c (id,name,b_id) VALUES (2,'C2',1);
 INSERT INTO table_c (id,name,b_id) VALUES (3,'C3',1);
 
 CREATE TABLE table_d (
-	id int PRIMARY KEY,
+	id integer PRIMARY KEY autoincrement,
 	name text,
 	a_id int,
 	a2_id int
@@ -83,8 +84,17 @@ END;
 		$this->assertEquals("SUCCESS",$test["status"]);
 	}
 	
-	public function testHasManyOneToMany(){
+	public function testGetOne(){
+		// 1. test B.a_id->A
+		$test = new ModelB($this->db->filter(array("id"=>1)));
+		$this->assertEquals("A1",$test["a"]["name"]);
 		
+		// 2. test AB.a_id->A
+		$test = new ModelAB($this->db->filter(array("id"=>1)));
+		$this->assertEquals("A1",$test["a"]["name"]);
+	}
+	
+	public function testGetMany(){
 		// 1. test A->B.a_id (one-to-many)
 		$test = new ModelA($this->db->filter(array("id"=>1)));
 		$this->assertEquals("B1",$test["b_list"][0]["name"]);
@@ -113,6 +123,80 @@ END;
 		$this->assertEquals("D1",$test["d_list"][0]["name"]);
 		$this->assertEquals("D2",$test["d_list"][1]["name"]);
 	}
+	
+	public function testSetOne(){
+		$a = new ModelA(array("name"=>"testA"));
+		$test = new ModelB($this->db->filter(array("id"=>1)));
+		$test["a"] = $a;
+		$this->assertEquals("testA",$test["a"]["name"]);
+	}
+	
+	public function testUpsertManyByID(){
+		$a_filter = $this->db->filter(array("id"=>1));
+		$test = new ModelA($this->db->filter(array("id"=>1)));
+		
+		// 1. test A->B
+		/*ModelA::upsert($a_filter,array("b_list"=>array(1,3)));
+		DTLog::debug($test["b_list"]);
+		$this->assertEquals("B1",$test["b_list"][0]["name"]);
+		$this->assertNotEquals("B2",$test["b_list"][1]["name"]);
+		
+		// 2. test A->AB->B
+		ModelA::upsert($a_filter,array("b_list_weak"=>array(1,3)));
+		DTLog::debug($test["b_list_weak"]);
+		$this->assertEquals("B1",$test["b_list_weak"][0]["name"]);
+		$this->assertNotEquals("B2",$test["b_list_weak"][1]["name"]);*/
+		
+		// 3. test A->AB->B->C
+		ModelA::upsert($a_filter,array("c_list"=>array(1,2,4)));
+		$this->assertEquals("C1",$test["c_list"][0]["name"]);
+		$this->assertEquals("C2",$test["c_list"][1]["name"]);
+		$this->assertNotEquals("C3",$test["c_list"][2]["name"]);
+		
+		
+	}
+	
+	public function testUpsertManyByIDOptimized(){
+		// 1. test A->C by ids
+		$cs = array(
+			new ModelC(array("id"=>1)),
+			new ModelC(array("id"=>2)),
+			new ModelC(array("id"=>4))
+		);
+		
+		//ModelA::upsert($a_filter,array("c_list_optimized"=>$cs));
+		
+		$test = new ModelA($this->db->filter(array("id"=>1)));
+		
+		$this->assertEquals("C1",$test["c_list"][0]["name"]);
+		$this->assertEquals("C2",$test["c_list"][1]["name"]);
+		
+		/*$this->assertEquals("C1",$test["c_list"][0]["name"]);
+		$this->assertEquals("C2",$test["c_list"][1]["name"]);
+		$this->assertNotEquals("C3",$test["c_list"][2]["name"]);*/
+	}
+	
+	public function testUpsertManyByIDWithParams(){
+		// 1. test A->C by ids+params
+		$cs = array(
+			new ModelC(array("id"=>1,"name"=>"C1")),
+			new ModelC(array("id"=>2,"name"=>"C2")),
+			new ModelC(array("id"=>4,"name"=>"C4"))
+		);
+		
+		ModelA::upsert($this->db->filter(array("id"=>1)),$cs);
+	}
+	
+	public function testUpsertManyByParams(){
+		// 1. test A->C by params
+		$cs = array(
+			new ModelC(array("name"=>"C1")),
+			new ModelC(array("name"=>"C2")),
+			new ModelC(array("name"=>"C4"))
+		);
+		
+		ModelA::upsert($this->db->filter(array("id"=>1)),$cs);
+	}
 }
 
 class TestModel extends DTModel{
@@ -133,6 +217,8 @@ class ModelA extends DTModel{
 		"c_list_optimized"=>array("ModelAB.b_id","ModelC.b_id"),
 		"d_list"=>array("ModelD.a2_id")
 	);
+	public $name;
+	public $c_list;
 }
 
 class ModelB extends DTModel{
@@ -143,6 +229,8 @@ class ModelB extends DTModel{
 	protected static $has_many_manifest = array(
 		"c_list"=>array("ModelC")
 	);
+	public $name;
+	public $a;
 }
 
 class ModelAB extends DTModel{
@@ -151,6 +239,9 @@ class ModelAB extends DTModel{
 		"a"=>array("ModelA","a_id"),
 		"b"=>array("ModelB","b_id")
 	);
+	public $name;
+	public $a_id;
+	public $b_id;
 }
 
 class ModelC extends DTModel{

@@ -114,16 +114,30 @@ class DTModel implements arrayaccess {
 		if(method_exists($this, $accessor)) //use the accessor method
 			return $this->$accessor();
 		$manifest = static::hasManyManifest();
+		if(property_exists($this, $offset)){ //use the property, if set
+			$val = $this->$offset;
+			if($val!==null)
+				return $val;
+		}
+		if(static::$strict_properties==false){ // get object property, if set
+			$val = isset($this->_properties[$offset])?$this->_properties[$offset]:null;
+			if($val!==null)
+				return $val;
+		}
 		if(isset($manifest[$offset]))
 			return $this->getMany($manifest[$offset]);
-		if(property_exists($this, $offset)) //use the property
-			return $this->$offset;
-		if(static::$strict_properties==false)// get object property
-			return isset($this->_properties[$offset])?$this->_properties[$offset]:null;
-			
-		DTLog::warn("property does not exist ({$offset})"); //this can happen for valid reasons with strict properties
+		$manifest = static::hasAManifest();
+		if(isset($manifest[$offset]))
+			return $this->hasA($manifest[$offset][0],$manifest[$offset][1]);
 		return null;
     }
+    
+    public function getDirty($offset){
+	 	if(isset($this->$offset) || isset($this->_properties[$offset])){
+		 	return $this[$offset];
+		}
+		return null;   
+	}
     
     /**
 	    @param chain a chain of models to traverse
@@ -150,9 +164,8 @@ class DTModel implements arrayaccess {
 		    $model = $link[0];
 		    if(count($link)>1)
 		    	$col = $link[1];
-			else{
+			else
 		    	$col = $model::columnForModel($last_model);
-		    }
 		    
 		    $alias = $model."_".count($chain);
 		    
@@ -164,6 +177,85 @@ class DTModel implements arrayaccess {
 	    $qb->filter(array("{$last_alias}.{$key_col}"=>$this[static::$primary_key_column]));
 
 	    return $target_class::select($qb);
+	}
+	
+	/**
+		@return returns a set of all ids linked at each level of the given chain	
+	*/
+	public function closure(Array $chain){
+		$closure = array();
+		$last_model = get_called_class();
+		$val = $this[static::$primary_key_column];
+		$closure[get_called_class()] = $last_ids = array($val=>$val);
+		foreach($chain as $c){
+			$link = explode(".",$c);
+			$model = $link[0];
+			$col = $model::columnForModel($last_model); //a_id
+			$key = $model::$primary_key_column; //id
+			$filter = array($col=>array("IN",$last_ids));
+			$matches = $model::select($this->db->filter($filter));
+			$closure[$model] = $last_ids = array_reduce($matches,function($out,$i) use ($key){$out[$i[$key]]=$i[$key]; return $out;},array());
+			$last_model = $model;
+		}
+		return $closure;
+	}
+	
+	/**
+		@param chain the chain to follow for upserting
+		@param vals the values to be upserted in the target table
+		@param builder_f an optional user function to transform the upsert parameters (default behavior is to match to the primary key column)	
+	*/
+	public function setMany(Array $chain,Array $vals,$builder_f=null){		
+	    //prepare the parameters for filter/upsert in the target table (builder_f)
+	    $link = explode(".",$chain[count($chain)-1]);
+	    $target_class = $link[0];
+		$key = $target_class::$primary_key_column;
+		if(!isset($builder_f)){
+			$builder_f = function($out,$i) use ($key){
+				$out[] = is_array($i)?$i:array($key=>$i);
+				return $out;
+			};
+		}
+		$params = array_reduce($vals,$builder_f,array());
+		
+		$stale_sets = $this->closure($chain);
+		DTLog::debug($stale_sets);
+		
+		// do the chain of upserts
+		array_unshift($chain,get_called_class());
+		while(count($chain)>1){
+			$link = explode(".",array_pop($chain));
+		    $model = $link[0];
+		    $link = explode(".",$chain[count($chain)-1]);
+		    $next_model = $link[0];
+
+			DTLog::debug(DTLog::colorize("{$model} => {$next_model}","warn"));		    
+		    $col = $model::columnForModel($next_model);
+		    $next_col= $next_model::columnForModel($model);
+			$stale = $stale_sets[$model];
+			
+			DTLog::debug("params: %s",$params);
+			$last_params = array();
+			foreach($params as $p){
+				if($col!=$model::$primary_key_column){
+					foreach($stale_sets[$next_model] as $next_k){
+						$p[$col]=$next_k;
+						DTLog::debug($p);
+						$obj = $model::upsert($this->db->filter($p),array(),$p);
+						unset($stale[$obj[$model::$primary_key_column]]);
+						$last_params[] = array($next_col=>$obj[$model::$primary_key_column]);
+					}
+				}else{ //we would have the same 
+					$obj = $model::upsert($this->db->filter($p),$p);
+					unset($stale[$obj[$model::$primary_key_column]]);
+					$last_params[] = array($next_col=>$obj[$model::$primary_key_column]);
+				}
+			}
+			//DTLog::debug("stale: %s",$stale);
+			if(count($stale)>0)
+				$model::deleteRows($this->db->filter(array($model::$primary_key_column=>array("IN",array_keys($stale)))));
+			$params = $last_params;
+		}
 	}
     
     /**
@@ -299,7 +391,6 @@ class DTModel implements arrayaccess {
 			$obj->clean($qb->db); //replace storage with clean varieties
 			$obj->merge($params,$changes); // now we're ready to merge in the new stuff
 			$obj->update($qb->db,$qb->filter(array(static::$primary_key_column=>$obj[static::$primary_key_column]))); //it's essential that this use the +primary_key_column+
-			return $obj;
 		}catch(Exception $e){
 			if($e->getCode()==1){ //the record doesn't exist, insert it instead
 				$obj = new static();
@@ -307,10 +398,19 @@ class DTModel implements arrayaccess {
 				$obj->merge($defaults); //use the accessor for defaults
 				$obj->merge($params,$changes);
 				$obj->insert($qb->db);
-				return $obj;
 			}else
 				throw $e;
 		}
+		
+		//gather up dirty properties that need upserting
+		$manifest = static::hasManyManifest();
+		foreach($manifest as $property=>$chain){
+			$val = $obj->getDirty($property);
+			if(isset($val))
+				$obj->setMany($chain,$val);
+		}
+		
+		return $obj;
 	}
 	
 	/** called during instantiation from storage--override to modify QB */
@@ -447,7 +547,7 @@ class DTModel implements arrayaccess {
 		return json_encode($this->publicProperties());
 	}
 	
-	public function belongsTo($class,$column){
+	public function hasA($class,$column){
 		try{
 			return new $class($this->db->filter(array($class::$primary_key_column=>$this[$column])));
 		}catch(Exception $e){
@@ -462,7 +562,7 @@ class DTModel implements arrayaccess {
 	
 	public function nameFrom($class,$by,$column="name"){
 		try{
-			$obj = $this->belongsTo($class,$by);
+			$obj = $this->hasA($class,$by);
 				return $obj[$column];
 		}catch(Exception $e){}
 		return "";
