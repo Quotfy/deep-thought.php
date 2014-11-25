@@ -121,8 +121,8 @@ END;
 		// 5. test A->D.a2_id
 		$test = new ModelA($this->db->filter(array("id"=>1)));
 		DTLog::debug($test["d_list"]);
+		$this->assertEquals(1,count($test["d_list"]));
 		$this->assertEquals("D1",$test["d_list"][0]["name"]);
-		$this->assertEquals("D2",$test["d_list"][1]["name"]);
 	}
 	
 	public function testSetOne(){
@@ -132,7 +132,7 @@ END;
 		$this->assertEquals("testA",$test["a"]["name"]);
 	}
 	
-	/*public function testUpsertManyByID(){
+	public function testUpsertManyByID(){
 		$a_filter = $this->db->filter(array("id"=>1));
 		$test = new ModelA($this->db->filter(array("id"=>1)));
 		// test A->B
@@ -165,10 +165,11 @@ END;
 		$test = new ModelA($a_filter);
 		// test A->AB->C (shortcut)
 		ModelA::upsert($a_filter,array("c_list_optimized"=>array(1,2,4)));
+		DTLog::debug($test["c_list_optimized"]);
 		$this->assertEquals("C1",$test["c_list_optimized"][0]["name"]);
 		$this->assertEquals("C2",$test["c_list_optimized"][1]["name"]);
 		$this->assertNotEquals("C3",$test["c_list_optimized"][2]["name"]);
-	}*/
+	}
 	
 	public function testUpsertManyByIDDList(){
 		$a_filter = $this->db->filter(array("id"=>1));

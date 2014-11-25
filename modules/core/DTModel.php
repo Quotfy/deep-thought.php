@@ -153,6 +153,8 @@ class DTModel implements arrayaccess {
 		
 		$link = explode(".",$chain[0]);
 	    $key_col = $link[0]::columnForModel(get_called_class());
+	    if(count($link)>1)
+	    	$key_col = $link[1];
 	    $link = explode(".",array_pop($chain));
 	    $target_class = $link[0];
 	    
@@ -165,10 +167,9 @@ class DTModel implements arrayaccess {
 	    while(count($chain)>0){
 		    $link = explode(".",array_pop($chain));
 		    $model = $link[0];
+		    $col = $model::columnForModel($last_model);
 		    if(count($link)>1)
 		    	$col = $link[1];
-			else
-		    	$col = $model::columnForModel($last_model);
 		    
 		    $alias = $model."_".count($chain);
 		    
@@ -192,17 +193,16 @@ class DTModel implements arrayaccess {
 		foreach($chain as $c){
 			$link = explode(".",$c);
 			$model = $link[0];
-			$col = $model::columnForModel($last_model); //a_id
-			if(count($link)>1 && $col==$model::$primary_key_column)
-		    	$col=$link[1];
+			$col = count($link)>1?$link[1]:$model::columnForModel($last_model);
+			/*$col = $model::columnForModel($last_model); //a_id
+			if(count($link)>1)// && $col==$model::$primary_key_column)
+		    	$col=$link[1];*/
 			$key = $model::$primary_key_column; //id
 			
 			$arr = array();
 			foreach($last_ids as $id=>$v){
-				//$filter = array($col=>array("IN",$last_ids));
 				$filter = array($col=>$id);
 				$matches = $model::select($this->db->filter($filter));
-				//$closure[$model] = $last_ids = array_reduce($matches,function($out,$i) use ($key,$id){$out[$i[$key]]=$id; return $out;},array());
 				$out = array_reduce($matches,function($out,$i) use ($key,$id){$out[$i[$key]]=$id; return $out;},array());
 				$arr = $out+$arr;
 			}
@@ -241,10 +241,10 @@ class DTModel implements arrayaccess {
 		    $model = $link1[0];
 		    $link2 = explode(".",$chain[count($chain)-1]);
 		    $next_model = $link2[0];
-		    //$col = count($link1)>1?$link1[1]:$model::columnForModel($next_model);
-		    $col = $model::columnForModel($next_model);
-		    if(count($link1)>1 && $col==$model::$primary_key_column)
-		    	$col=$link1[1];
+		    $col = count($link1)>1?$link1[1]:$model::columnForModel($next_model);
+		    /*$col = $model::columnForModel($next_model);
+		    if(count($link1)>1)// && $col==$model::$primary_key_column)
+		    	$col=$link1[1];*/
 		    $next_col = count($link2)>1?$link2[1]:$next_model::columnForModel($model);
 		    /*$next_col = $next_model::columnForModel($model);
 		    if(count($link2)>1 && $col==$next_model::$primary_key_column)
