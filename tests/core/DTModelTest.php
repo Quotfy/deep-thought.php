@@ -224,22 +224,17 @@ class ModelA extends DTModel{
 	public $c_list;
 	
 	public function CList(){
-		$manifest = $this->hasManyManifest();
-		$qb = $this->db->filter()->orderBy("ModelC.id");
-		return $this->getMany($manifest["c_list"],$qb);
-	}
-	
-	public function setCListTags($vals){
-		$manifest = $this->hasManyManifest();
-		return $this->setMany($manifest["c_list"],$vals,function($out,$i){
-			$out[] = array("name"=>$i); return $out;
-		});
+		return $this->getMany("c_list",$this->db->qb()->orderBy("ModelC.id"));
 	}
 	
 	public function CListOptimized(){
-		$manifest = $this->hasManyManifest();
-		$qb = $this->db->filter()->orderBy("ModelC.id");
-		return $this->getMany($manifest["c_list_optimized"],$qb);
+		return $this->getMany("c_list_optimized",$this->db->qb()->orderBy("ModelC.id"));
+	}
+	
+	public function setCListTags($vals){
+		return $this->setMany("c_list",$vals,function($out,$i){
+			$out[] = array("name"=>$i); return $out;
+		});
 	}
 }
 

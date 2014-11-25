@@ -147,7 +147,12 @@ class DTModel implements arrayaccess {
 	    @param qb optional DTQueryBuilder (use <Model>_<seq#> for filtering)
 	  @return returns an array of DTModels by traversing an entry in the has-many manifest  
 	*/
-    public function getMany(Array $chain,DTQueryBuilder $qb=null){
+    public function getMany($chainOrName,DTQueryBuilder $qb=null){
+	    $chain = $chainOrName;
+	    if(!is_array($chainOrName)){
+		    $manifest = $this->hasManyManifest();
+		    $chain = $manifest[$chainOrName];
+		}
 	    if(!isset($qb))
 		    $qb = $this->db->qb();
 		
@@ -194,9 +199,6 @@ class DTModel implements arrayaccess {
 			$link = explode(".",$c);
 			$model = $link[0];
 			$col = count($link)>1?$link[1]:$model::columnForModel($last_model);
-			/*$col = $model::columnForModel($last_model); //a_id
-			if(count($link)>1)// && $col==$model::$primary_key_column)
-		    	$col=$link[1];*/
 			$key = $model::$primary_key_column; //id
 			
 			$arr = array();
@@ -217,7 +219,13 @@ class DTModel implements arrayaccess {
 		@param vals the values to be upserted in the target table
 		@param builder_f an optional user function to transform the upsert parameters (default behavior is to match to the primary key column)	
 	*/
-	public function setMany(Array $chain,Array $vals,$builder_f=null){		
+	public function setMany($chainOrName,Array $vals,$builder_f=null){		
+		$chain = $chainOrName;
+	    if(!is_array($chainOrName)){
+		    $manifest = $this->hasManyManifest();
+		    $chain = $manifest[$chainOrName];
+		}
+		
 	    //prepare the parameters for filter/upsert in the target table (builder_f)
 	    $link = explode(".",$chain[count($chain)-1]);
 	    $target_class = $link[0];
