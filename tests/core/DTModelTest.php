@@ -134,29 +134,35 @@ END;
 	public function testUpsertManyByID(){
 		$a_filter = $this->db->filter(array("id"=>1));
 		$test = new ModelA($this->db->filter(array("id"=>1)));
-		
-		// 1. test A->B
-		/*ModelA::upsert($a_filter,array("b_list"=>array(1,3)));
+		// test A->B
+		ModelA::upsert($a_filter,array("b_list"=>array(1,3)));
 		DTLog::debug($test["b_list"]);
 		$this->assertEquals("B1",$test["b_list"][0]["name"]);
 		$this->assertNotEquals("B2",$test["b_list"][1]["name"]);
-		
+	}
+	
+	public function testUpsertManyByIDBListWeak(){
+		$a_filter = $this->db->filter(array("id"=>1));
+		$test = new ModelA($this->db->filter(array("id"=>1)));
 		// 2. test A->AB->B
 		ModelA::upsert($a_filter,array("b_list_weak"=>array(1,3)));
 		DTLog::debug($test["b_list_weak"]);
 		$this->assertEquals("B1",$test["b_list_weak"][0]["name"]);
-		$this->assertNotEquals("B2",$test["b_list_weak"][1]["name"]);*/
-		
-		// 3. test A->AB->B->C
+		$this->assertNotEquals("B2",$test["b_list_weak"][1]["name"]);
+	}
+	
+	public function testUpsertManyByIDCList(){
+		$a_filter = $this->db->filter(array("id"=>1));
+		$test = new ModelA($a_filter);
+		// test A->AB->B->C
 		ModelA::upsert($a_filter,array("c_list"=>array(1,2,4)));
+		DTLog::debug($test["c_list"]);
 		$this->assertEquals("C1",$test["c_list"][0]["name"]);
 		$this->assertEquals("C2",$test["c_list"][1]["name"]);
 		$this->assertNotEquals("C3",$test["c_list"][2]["name"]);
-		
-		
 	}
 	
-	public function testUpsertManyByIDOptimized(){
+/*public function testUpsertManyByIDOptimized(){
 		// 1. test A->C by ids
 		$cs = array(
 			new ModelC(array("id"=>1)),
@@ -164,16 +170,13 @@ END;
 			new ModelC(array("id"=>4))
 		);
 		
-		//ModelA::upsert($a_filter,array("c_list_optimized"=>$cs));
+		ModelA::upsert($a_filter,array("c_list_optimized"=>$cs));
 		
 		$test = new ModelA($this->db->filter(array("id"=>1)));
 		
 		$this->assertEquals("C1",$test["c_list"][0]["name"]);
 		$this->assertEquals("C2",$test["c_list"][1]["name"]);
-		
-		/*$this->assertEquals("C1",$test["c_list"][0]["name"]);
-		$this->assertEquals("C2",$test["c_list"][1]["name"]);
-		$this->assertNotEquals("C3",$test["c_list"][2]["name"]);*/
+		$this->assertNotEquals("C3",$test["c_list"][2]["name"]);
 	}
 	
 	public function testUpsertManyByIDWithParams(){
@@ -197,6 +200,7 @@ END;
 		
 		ModelA::upsert($this->db->filter(array("id"=>1)),$cs);
 	}
+*/
 }
 
 class TestModel extends DTModel{
@@ -219,6 +223,12 @@ class ModelA extends DTModel{
 	);
 	public $name;
 	public $c_list;
+	
+	public function CList(){
+		$manifest = $this->hasManyManifest();
+		$qb = $this->db->filter()->orderBy("ModelC.id");
+		return $this->getMany($manifest["c_list"],$qb);
+	}
 }
 
 class ModelB extends DTModel{
@@ -249,6 +259,7 @@ class ModelC extends DTModel{
 	protected static $has_a_manifest = array(
 		"b"=>array("ModelB","b_id")
 	);
+	public $name;
 }
 
 class ModelD extends DTModel{
@@ -257,4 +268,5 @@ class ModelD extends DTModel{
 		"a"=>array("ModelA","a_id"),
 		"a2"=>array("ModelA","a2_id")
 	);
+	public $name;
 }
