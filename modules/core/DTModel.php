@@ -421,13 +421,14 @@ class DTModel implements arrayaccess {
 		@return returns the updated or inserted object
 	*/
 	public static function upsert(DTQueryBuilder $qb,array $params,array $defaults=array(), &$changes=null){
-		// update parent class(es) to get references
-		$manifest = static::isAManifest();
+		// update parent class(es) to get references (top to bottom)
+		$manifest = array_reverse(static::isAManifest());
 		foreach($manifest as $col=>$m){
 			$link = explode(".",$m);
 			$dst_model = $link[0];
 			$dst_col = count($link)>1?$link[1]:$dst_model::$primary_key_column;
-			$parent = $dst_model::upsert($qb->db->filter(array("{$dst_model}.{$dst_col}"=>$params[$col])),$params);
+			$old_id = isset($params[$col])?$params[$col]:0;
+			$parent=$dst_model::upsert($qb->db->filter(array("{$dst_model}.{$dst_col}"=>$old_id)),$params);
 			$params[$col] = $parent[$dst_col];
 		}
 		
@@ -667,8 +668,6 @@ class DTModel implements arrayaccess {
 			$manifests[get_called_class()] = static::$is_a_manifest;
 			if($parent=get_parent_class(get_called_class()))
 				$manifests[get_called_class()] = array_merge($manifests[get_called_class()],$parent::isAManifest());
-				
-			DTLog::debug("%s: %s",get_called_class(),$manifests[get_called_class()]);
 		}
 		return $manifests[get_called_class()];
 	}
