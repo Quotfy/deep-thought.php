@@ -39,6 +39,7 @@ class DTModel implements arrayaccess {
 	
 	protected static $has_a_manifest = array();
 	protected static $has_many_manifest = array();
+	protected static $is_a_manifest = array();
 	
 	protected $db=null;
 	public $id = 0;
@@ -116,7 +117,6 @@ class DTModel implements arrayaccess {
     	$accessor = preg_replace('/[^A-Z^a-z^0-9]+/','',$offset);
 		if(method_exists($this, $accessor)) //use the accessor method
 			return $this->$accessor();
-		$manifest = static::hasManyManifest();
 		if(property_exists($this, $offset)){ //use the property, if set
 			$val = $this->$offset;
 			if($val!==null)
@@ -127,11 +127,24 @@ class DTModel implements arrayaccess {
 			if($val!==null)
 				return $val;
 		}
-		if(isset($manifest[$offset]))
-			return $this->getMany($manifest[$offset]);
+		$manifest = static::hasManyManifest();
+		if(isset($manifest[$offset])){
+			$val = $this->getMany($manifest[$offset]);
+			if(property_exists($this, $offset))
+				$this->$offset = $val;
+			else
+				$this->_properties[$offset] = $val;
+			return $val;
+		}
 		$manifest = static::hasAManifest();
-		if(isset($manifest[$offset]))
-			return $this->hasA($manifest[$offset][0],$manifest[$offset][1]);
+		if(isset($manifest[$offset])){
+			$val = $this->hasA($manifest[$offset][0],$manifest[$offset][1]);
+			if(property_exists($this, $offset))
+				$this->$offset = $val;
+			else
+				$this->_properties[$offset] = $val;
+			return $val;
+		}
 		return null;
     }
     
@@ -190,7 +203,7 @@ class DTModel implements arrayaccess {
 	/**
 		@return returns a set of all ids linked at each level of the given chain	
 	*/
-	public function closure(Array $chain){
+	public function closure(Array $chain, Array &$defaults=array()){
 		$closure = array();
 		$last_model = get_called_class();
 		$val = $this[static::$primary_key_column];
@@ -203,6 +216,7 @@ class DTModel implements arrayaccess {
 			
 			$arr = array();
 			foreach($last_ids as $id=>$v){
+				$defaults[$model] = $id;
 				$filter = array($col=>$id);
 				$matches = $model::select($this->db->filter($filter));
 				$out = array_reduce($matches,function($out,$i) use ($key,$id){$out[$i[$key]]=$id; return $out;},array());
@@ -216,10 +230,10 @@ class DTModel implements arrayaccess {
 	
 	/**
 		@param chain the chain to follow for upserting
-		@param vals the values to be upserted in the target table
+		@param vals the values to be upserted in the target table (converted to array, if necessary)
 		@param builder_f an optional user function to transform the upsert parameters (default behavior is to match to the primary key column)	
 	*/
-	public function setMany($chainOrName,Array $vals,$builder_f=null){		
+	public function setMany($chainOrName,$vals,$builder_f=null){		
 		$chain = $chainOrName;
 	    if(!is_array($chainOrName)){
 		    $manifest = $this->hasManyManifest();
@@ -238,7 +252,8 @@ class DTModel implements arrayaccess {
 		}
 		$params = array_reduce($vals,$builder_f,array());
 		
-		$stale_sets = $this->closure($chain);
+		$defaults = array();
+		$stale_sets = $this->closure($chain,$defaults);
 		
 		// do the chain of upserts
 		$inserted = array();
@@ -251,8 +266,13 @@ class DTModel implements arrayaccess {
 		    $col = count($link1)>1?$link1[1]:$model::columnForModel($next_model);
 		    $next_col = count($link2)>1?$link2[1]:$next_model::columnForModel($model);
 
+			//@todo need to handle where there are no previous associations
 			$stale = $stale_sets[$model];
-			$default_v = array_values($stale)[0];
+			$default_v = $defaults[$model];
+			/*if(count($stale)>0)
+				$default_v = array_values($stale)[0];
+			else
+				$default_v = 0;*/
 			$last_params = array();
 			foreach($params as $p){
 				$v = array_values($p)[0];
@@ -407,7 +427,7 @@ class DTModel implements arrayaccess {
 				return $obj; // there are no changes, let's get outta here
 			$obj->clean($qb->db); //replace storage with clean varieties
 			$obj->merge($params,$changes); // now we're ready to merge in the new stuff
-			$obj->update($qb->db,$qb->filter(array(static::$primary_key_column=>$obj[static::$primary_key_column]))); //it's essential that this use the +primary_key_column+
+			$obj->update($qb->db); //it's essential that this use *only* the +primary_key_column+
 		}catch(Exception $e){
 			if($e->getCode()==1){ //the record doesn't exist, insert it instead
 				$obj = new static();
@@ -419,20 +439,34 @@ class DTModel implements arrayaccess {
 				throw $e;
 		}
 		
-		//gather up dirty properties that need upserting
-		/*$manifest = static::hasManyManifest();
-		foreach($manifest as $property=>$chain){
-			$val = $obj->getDirty($property);
-			if(isset($val))
-				$obj->setMany($chain,$val);
-		}*/
+		// update parent class(es)
+		$manifest = static::isAManifest();
+		foreach($manifest as $col=>$m){
+			$link = explode(".",$m);
+			$dst_model = $link[0];
+			$dst_col = count($link)>1?$link[1]:$dst_model::$primary_key_column;
+			$parent = $dst_model::upsert($qb->db->filter(array($dst_col=>$obj[$col])),$params);
+			$obj[$col] = $parent[$dst_col];
+		}
 		
 		return $obj;
 	}
 	
 	/** called during instantiation from storage--override to modify QB */
 	public static function selectQB($qb){
-		return $qb->from(static::$storage_table." ".get_called_class());
+		$qb->from(static::$storage_table." ".get_called_class());
+		$manifest = static::isAManifest();
+		$i = 0;
+		foreach($manifest as $col=>$m){
+			$link = explode(".",$m);
+			$dst_model = $link[0];
+			$dst_col = count($link)>1?$link[1]:$dst_model::$primary_key_column;
+			$dst_alias = "{$dst_model}_{$i}";
+			$dst = "{$dst_model::$storage_table} {$dst_alias}";
+			$qb->join($dst,"{$col}={$dst_alias}.{$dst_col}");
+			$i++;
+		}
+		return $qb;
 	}
 	
 	public static function select(DTQueryBuilder $qb,$cols=null){
@@ -567,9 +601,7 @@ class DTModel implements arrayaccess {
 	public function hasA($class,$column){
 		try{
 			return new $class($this->db->filter(array($class::$primary_key_column=>$this[$column])));
-		}catch(Exception $e){
-			DTLog::error($e->getMessage());
-		}
+		}catch(Exception $e){}
 		return null;
 	}
 	
@@ -583,10 +615,6 @@ class DTModel implements arrayaccess {
 				return $obj[$column];
 		}catch(Exception $e){}
 		return "";
-	}
-	
-	public static function joinSubclassProperties($qb,$table,$col){
-		return $qb->join($table,get_called_class().".".static::$primary_key_column."={$table}.{$col}");
 	}
 	
 	public static function oneToMany($qb,$class,$vals=null){
@@ -616,8 +644,9 @@ class DTModel implements arrayaccess {
 		static $manifests = array();
 		if(!isset($manifests[get_called_class()])){
 			$manifests[get_called_class()] = static::$has_many_manifest;
-			if(get_parent_class())
-				$manifests[get_called_class()] = array_merge(parent::hasManyManifest(),$manifests[get_called_class()]);
+			if($parent=get_parent_class(get_called_class()))
+				$manifests[get_called_class()] = array_merge($parent::hasManyManifest(),$manifests[get_called_class()]);
+			
 		}
 		return $manifests[get_called_class()];
 	}
@@ -626,24 +655,33 @@ class DTModel implements arrayaccess {
 		static $manifests = array();
 		if(!isset($manifests[get_called_class()])){
 			$manifests[get_called_class()] = static::$has_a_manifest;
-			if(get_parent_class())
-				$manifests[get_called_class()] = array_merge(parent::hasAManifest(),$manifests[get_called_class()]);
+			if($parent=get_parent_class(get_called_class()))
+				$manifests[get_called_class()] = array_merge($parent::hasAManifest(),$manifests[get_called_class()]);
+		}
+		return $manifests[get_called_class()];
+	}
+	
+	protected static function isAManifest(){
+		static $manifests = array();
+		if(!isset($manifests[get_called_class()])){
+			$manifests[get_called_class()] = static::$is_a_manifest;
+			if($parent=get_parent_class(get_called_class()))
+				$manifests[get_called_class()] = array_merge($manifests[get_called_class()],$parent::isAManifest());
+				
+			DTLog::debug("%s: %s",get_called_class(),$manifests[get_called_class()]);
 		}
 		return $manifests[get_called_class()];
 	}
 	
 	protected static function columnForModel($model){
 		$manifest = static::hasAManifest();
-		foreach($manifest as $m){
-			if($m[0]==$model)
-				return $m[1];
-		}
-		//try again, but look for splits (less efficient)
-		foreach($manifest as $m){
-			$parts = explode(".",$m[0]);
-			if($parts[0]==$model)
-				return $m[1];
-		}
+		do{ //crawl up the ancencestors
+			foreach($manifest as $m){
+				$parts = explode(".",$m[0]);
+				if($parts[0]==$model)
+					return $m[1];
+			}
+		}while(($model=get_parent_class($model))!=false);
 		return static::$primary_key_column; //we've got the relationship backward
 	}
 }
