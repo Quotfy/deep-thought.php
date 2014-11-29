@@ -421,23 +421,13 @@ class DTModel implements arrayaccess {
 		@return returns the updated or inserted object
 	*/
 	public static function upsert(DTQueryBuilder $qb,array $params,array $defaults=array(), &$changes=null){
-		// update parent class(es) to get references (top to bottom)
-		$manifest = array_reverse(static::isAManifest());
-		foreach($manifest as $col=>$m){
-			$link = explode(".",$m);
-			$dst_model = $link[0];
-			$dst_col = count($link)>1?$link[1]:$dst_model::$primary_key_column;
-			$old_id = isset($params[$col])?$params[$col]:0;
-			$parent=$dst_model::upsert($qb->db->filter(array("{$dst_model}.{$dst_col}"=>$old_id)),$params);
-			$params[$col] = $parent[$dst_col];
-		}
-		
 		try{
 			$obj = new static($qb); //if we fail out here, it's probably because the record needs to be inserted
 			if(count($params)==0)
 				return $obj; // there are no changes, let's get outta here
 			$obj->clean($qb->db); //replace storage with clean varieties
 			$obj->merge($params,$changes); // now we're ready to merge in the new stuff
+			$obj->upsertAncestors($params);
 			$obj->update($qb->db); //it's essential that this use *only* the +primary_key_column+
 		}catch(Exception $e){
 			if($e->getCode()==1){ //the record doesn't exist, insert it instead
@@ -445,12 +435,24 @@ class DTModel implements arrayaccess {
 				$obj->setStore($qb->db);
 				$obj->merge($defaults); //use the accessor for defaults
 				$obj->merge($params,$changes);
+				$obj->upsertAncestors($params);
 				$obj->insert($qb->db);
 			}else
 				throw $e;
 		}
-		
 		return $obj;
+	}
+	
+	protected function upsertAncestors(array $params){
+		$manifest = array_reverse(static::isAManifest());
+		foreach($manifest as $col=>$m){
+			$link = explode(".",$m);
+			$dst_model = $link[0];
+			$dst_col = count($link)>1?$link[1]:$dst_model::$primary_key_column;
+			$old_id = isset($params[$col])?$params[$col]:0;
+			$parent=$dst_model::upsert($this->db->filter(array("{$dst_model}.{$dst_col}"=>$this[$col])),$params);
+			$this[$col] = $parent[$dst_col];
+		}
 	}
 	
 	/** called during instantiation from storage--override to modify QB */
