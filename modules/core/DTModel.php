@@ -421,6 +421,16 @@ class DTModel implements arrayaccess {
 		@return returns the updated or inserted object
 	*/
 	public static function upsert(DTQueryBuilder $qb,array $params,array $defaults=array(), &$changes=null){
+		// update parent class(es) to get references
+		$manifest = static::isAManifest();
+		foreach($manifest as $col=>$m){
+			$link = explode(".",$m);
+			$dst_model = $link[0];
+			$dst_col = count($link)>1?$link[1]:$dst_model::$primary_key_column;
+			$parent = $dst_model::upsert($qb->db->filter(array($dst_col=>$params[$col])),$params);
+			$params[$col] = $parent[$dst_col];
+		}
+		
 		try{
 			$obj = new static($qb); //if we fail out here, it's probably because the record needs to be inserted
 			if(count($params)==0)
@@ -437,16 +447,6 @@ class DTModel implements arrayaccess {
 				$obj->insert($qb->db);
 			}else
 				throw $e;
-		}
-		
-		// update parent class(es)
-		$manifest = static::isAManifest();
-		foreach($manifest as $col=>$m){
-			$link = explode(".",$m);
-			$dst_model = $link[0];
-			$dst_col = count($link)>1?$link[1]:$dst_model::$primary_key_column;
-			$parent = $dst_model::upsert($qb->db->filter(array($dst_col=>$obj[$col])),$params);
-			$obj[$col] = $parent[$dst_col];
 		}
 		
 		return $obj;
