@@ -427,7 +427,7 @@ class DTModel implements arrayaccess {
 			$link = explode(".",$m);
 			$dst_model = $link[0];
 			$dst_col = count($link)>1?$link[1]:$dst_model::$primary_key_column;
-			$parent = $dst_model::upsert($qb->db->filter(array($dst_col=>$params[$col])),$params);
+			$parent = $dst_model::upsert($qb->db->filter(array("{$dst_model}.{$dst_col}"=>$params[$col])),$params);
 			$params[$col] = $parent[$dst_col];
 		}
 		
