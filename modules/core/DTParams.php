@@ -168,8 +168,8 @@ class DTParams implements arrayaccess{
 			if(empty($arr)) return array();
 			$arr = json_decode($arr,true);
 			if(!isset($arr)) $arr = $val;
-			if(!is_array($arr)) //must have been a single value
-				$arr = array($arr);
+			if(!is_array($arr)) //must have been a single value or ||| separated list
+				$arr = explode("|||",$arr);
 		}
 		$out = array();
 		foreach($arr as $k=>$v) //clean all the array params
