@@ -197,7 +197,7 @@ class DTModel implements arrayaccess {
 			$last_col = $col;
 		}
 	    $qb->filter(array("{$last_alias}.{$key_col}"=>$this[static::$primary_key_column]));
-	    return $target_class::select($qb);
+	    return $target_class::select($qb->groupBy("{$target_class}.{$target_class::$primary_key_column}"),"{$target_class}.*");
 	}
 	
 	/**
