@@ -182,6 +182,8 @@ class DTModel implements arrayaccess {
 	    if(count($link)>1)
 	    	$last_col = $link[1];
 	    $last_model = $last_alias = $target_class;
+	    if(count($chain)>0) //if we are joining anything, we need to use group-by
+	    	$qb->groupBy("{$target_class}.{$target_class::$primary_key_column}");
 	    while(count($chain)>0){
 		    $link = explode(".",array_pop($chain));
 		    $model = $link[0];
@@ -197,7 +199,7 @@ class DTModel implements arrayaccess {
 			$last_col = $col;
 		}
 	    $qb->filter(array("{$last_alias}.{$key_col}"=>$this[static::$primary_key_column]));
-	    return $target_class::select($qb->groupBy("{$target_class}.{$target_class::$primary_key_column}"),"{$target_class}.*");
+	    return $target_class::select($qb,"{$target_class}.*");
 	}
 	
 	/**
