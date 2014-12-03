@@ -256,6 +256,7 @@ class DTModel implements arrayaccess {
 		$stale_sets = $this->closure($chain,$defaults);
 		
 		// do the chain of upserts
+		$delete_stale = false; //don't delete from the destination table
 		$inserted = array();
 		array_unshift($chain,get_called_class());
 		while(count($chain)>1){
@@ -287,8 +288,10 @@ class DTModel implements arrayaccess {
 				unset($stale[$obj[$model::$primary_key_column]]);
 				$last_params[]=($next_col!=$next_model::$primary_key_column)?array($next_col=>$obj[$col]):array($next_col=>$p[$col]);
 			}
-			if(count($stale)>0)
+			if($delete_stale && count($stale)>0)
 				$model::deleteRows($this->db->filter(array($model::$primary_key_column=>array("IN",array_keys($stale)))));
+				
+			$delete_stale = true;
 			$params = $last_params;
 		}
 			
