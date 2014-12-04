@@ -258,7 +258,7 @@ class DTModel implements arrayaccess {
 		$stale_sets = $this->closure($chain,$defaults);
 		
 		// do the chain of upserts
-		$delete_stale = false; //don't delete from the destination table
+		$delete_stale = count($chain)==1?true:false; //don't delete from the destination table, unless it's the only stop
 		$inserted = array();
 		array_unshift($chain,get_called_class());
 		while(count($chain)>1){
@@ -271,7 +271,7 @@ class DTModel implements arrayaccess {
 
 			//@todo need to handle where there are no previous associations
 			$stale = $stale_sets[$model];
-			$default_v = $defaults[$model];
+			$default_v = (isset($defaults[$model]))?$defaults[$model]:0;
 			/*if(count($stale)>0)
 				$default_v = array_values($stale)[0];
 			else
