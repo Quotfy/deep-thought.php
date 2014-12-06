@@ -202,6 +202,17 @@ class DTModel implements arrayaccess {
 	    return $target_class::select($qb,"{$target_class}.*");
 	}
 	
+	public static function aliasForParent($model){
+		$manifest = static::isAManifest();
+		$i = 0;
+		foreach($manifest as $k=>$class){
+			if($class==$model)
+				return $model."_".$i;
+			$i++;
+		}
+		return $model;
+	}
+	
 	/**
 		@return returns a set of all ids linked at each level of the given chain	
 	*/
