@@ -94,14 +94,13 @@ class DTModel implements arrayaccess {
 			$manifest = static::hasManyManifest();
 			if(isset($manifest[$offset])) //this is a set-many relationship
 				return $this->setMany($manifest[$offset],$value);
-			if(property_exists($this, $offset)){ //use the property
-				$this->$offset = $value;
-				return $value;
-			}
-			if(static::$strict_properties==false){ // set object property
-				$this->_properties[$offset] = $value;
-				return $value;
-			}
+			$manifest = static::hasAManifest();
+			if(isset($manifest[$offset])) //this is a has-a relationship
+				$value = $this->setA($value,$manifest[$offset][0],$manifest[$offset][1]);
+			if(property_exists($this, $offset)) //use the property
+				return $this->$offset = $value;
+			if(static::$strict_properties==false) // set object property
+				return $this->_properties[$offset] = $value;
         }
     }
     public function offsetExists($offset) {
@@ -138,7 +137,7 @@ class DTModel implements arrayaccess {
 		}
 		$manifest = static::hasAManifest();
 		if(isset($manifest[$offset])){
-			$val = $this->hasA($manifest[$offset][0],$manifest[$offset][1]);
+			$val = $this->getA($manifest[$offset][0],$manifest[$offset][1]);
 			if(property_exists($this, $offset))
 				$this->$offset = $val;
 			else
@@ -617,14 +616,21 @@ class DTModel implements arrayaccess {
 		return json_encode($this->publicProperties());
 	}
 	
-	public function hasA($class,$column){
+	public function getA($class,$column){
 		try{
 			return new $class($this->db->filter(array($class::$primary_key_column=>$this[$column])));
 		}catch(Exception $e){}
 		return null;
 	}
 	
-	public function hasMany($class,$column){
+	/** this does an immidiate upsert
+		@return returns the primary key of the new object */
+	public function setA($val,$class,$column){
+		$obj = $class::upsert($this->db->filter($value),$value);
+		return $obj[$class::$primary_key_column];
+	}
+	
+	/*public function hasMany($class,$column){
 		return $class::select($this->db->filter(array($column=>static::$primary_key_column)));
 	}
 	
@@ -634,30 +640,7 @@ class DTModel implements arrayaccess {
 				return $obj[$column];
 		}catch(Exception $e){}
 		return "";
-	}
-	
-	public static function oneToMany($qb,$class,$vals=null){
-		$stale = $class::selectKV($qb,"{$class::$associations[$class]},{$class::$primary_key_column}");
-		if(isset($vals)){
-			foreach($vals as $id){
-				$qb->filter(array($class::$associations[$class]=>$id));
-				$class::upsert($qb,$qb->filter());
-				unset($stale[$id]);
-			}
-		}
-		if(count($stale)>0)
-			$class::deleteRows($qb->db->filter(array($class::$primary_key_column=>array("IN",$stale))));
-	}
-	
-	public static function oneToManyByTable($db,$params,$key,$class,$filter,$dst_col,$far_table,$filter_f){
-		//map to dst table first
-		$params[$key] = array_map(function($c){
-			$filter = $filter_r($c);
-			$c = $far_table::upsert($qb->db->filter($filter),array_merge($params,$filter));
-			return $far_table::$primary_key_column;
-		},$params[$key]);
-		static::oneToMany($db,$params,$key,$class,$filter,$dst_col);	
-	}
+	}*/
 	
 	protected static function hasManyManifest(){
 		static $manifests = array();
