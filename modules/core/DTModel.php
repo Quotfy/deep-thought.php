@@ -42,6 +42,7 @@ class DTModel implements arrayaccess {
 	protected static $is_a_manifest = array();
 	
 	protected $db=null;
+	protected $input=array();
 	public $id = 0;
 
     protected $_properties = array(); /** @internal */
@@ -87,16 +88,18 @@ class DTModel implements arrayaccess {
             return $value;
         } else {
 	    	$accessor = "set".preg_replace('/[^A-Z^a-z^0-9]+/','',$offset);
-			if(!$this->_bypass_accessors && method_exists($this, $accessor)) //use the accessor method
-				return $this->$accessor($value);
-			//	note: setMany causes immediate database insertion
-			//	this is necessary, because we need these objects hooked up	
-			$manifest = static::hasManyManifest();
-			if(isset($manifest[$offset])) //this is a set-many relationship
-				return $this->setMany($manifest[$offset],$value);
-			$manifest = static::hasAManifest();
-			if(isset($manifest[$offset])) //this is a has-a relationship
-				$value = $this->setA($value,$manifest[$offset][0],$manifest[$offset][1]);
+			if(!$this->_bypass_accessors){
+				if(method_exists($this, $accessor)) //use the accessor method
+					return $this->$accessor($value);
+				//	note: setMany causes immediate database insertion
+				//	this is necessary, because we need these objects hooked up	
+				$manifest = static::hasManyManifest();
+				if(isset($manifest[$offset])) //this is a set-many relationship
+					return $this->setMany($manifest[$offset],$value);
+				$manifest = static::hasAManifest();
+				if(isset($manifest[$offset])) //this is a has-a relationship
+					$value = $this->setA($offset);
+			}
 			if(property_exists($this, $offset)) //use the property
 				return $this->$offset = $value;
 			if(static::$strict_properties==false) // set object property
@@ -201,17 +204,6 @@ class DTModel implements arrayaccess {
 	    return $target_class::select($qb,"{$target_class}.*");
 	}
 	
-	public static function aliasForParent($model){
-		$manifest = static::isAManifest();
-		$i = 0;
-		foreach($manifest as $k=>$class){
-			if($class==$model)
-				return $model."_".$i;
-			$i++;
-		}
-		return $model;
-	}
-	
 	/**
 		@return returns a set of all ids linked at each level of the given chain	
 	*/
@@ -241,9 +233,11 @@ class DTModel implements arrayaccess {
 	}
 	
 	/**
+		@note this method will delete all other records linked to the model (stale entries)
 		@param chain the chain to follow for upserting
 		@param vals the values to be upserted in the target table (converted to array, if necessary)
 		@param builder_f an optional user function to transform the upsert parameters (default behavior is to match to the primary key column)	
+		@return returns the entries from the final link (should match getMany)
 	*/
 	public function setMany($chainOrName,$vals,$builder_f=null){		
 		$chain = $chainOrName;
@@ -270,6 +264,7 @@ class DTModel implements arrayaccess {
 		// do the chain of upserts
 		$delete_stale = count($chain)==1?true:false; //don't delete from the destination table, unless it's the only stop
 		$inserted = array();
+		$first_link = true;
 		array_unshift($chain,get_called_class());
 		while(count($chain)>1){
 			$link1 = explode(".",array_pop($chain));
@@ -279,13 +274,8 @@ class DTModel implements arrayaccess {
 		    $col = count($link1)>1?$link1[1]:$model::columnForModel($next_model);
 		    $next_col = count($link2)>1?$link2[1]:$next_model::columnForModel($model);
 
-			//@todo need to handle where there are no previous associations
 			$stale = $stale_sets[$model];
 			$default_v = (isset($defaults[$model]))?$defaults[$model]:0;
-			/*if(count($stale)>0)
-				$default_v = array_values($stale)[0];
-			else
-				$default_v = 0;*/
 			$last_params = array();
 			foreach($params as $p){
 				$v = array_values($p)[0];
@@ -296,7 +286,9 @@ class DTModel implements arrayaccess {
 					else //default (for new entries) is to link to the first entry from the previous table
 						$p[$col] = $default_v;
 				}
-				$inserted[] = $obj = $model::upsert($this->db->filter($p),$p);
+				$obj = $model::upsert($this->db->filter($p),$p);
+				if($first_link) //we're doing the last table
+					$inserted[] = $obj;
 				unset($stale[$obj[$model::$primary_key_column]]);
 				$last_params[]=($next_col!=$next_model::$primary_key_column)?array($next_col=>$obj[$col]):array($next_col=>$p[$col]);
 			}
@@ -304,6 +296,7 @@ class DTModel implements arrayaccess {
 				$model::deleteRows($this->db->filter(array($model::$primary_key_column=>array("IN",array_keys($stale)))));
 				
 			$delete_stale = true;
+			$first_link = false;
 			$params = $last_params;
 		}
 			
@@ -374,6 +367,7 @@ class DTModel implements arrayaccess {
 		@return returns the number of properties updated to new values
 	*/
 	public function merge(array $params, &$changes=null){
+		$this->input = $params;
 		if($changes==null)
 			$changes = array("old"=>array(),"new"=>array());
 		$cols = $this->db->columnsForTable(static::$storage_table);
@@ -449,9 +443,10 @@ class DTModel implements arrayaccess {
 				$obj = new static();
 				$obj->setStore($qb->db);
 				$obj->merge($defaults); //use the accessor for defaults
+				$obj->insert($qb->db);
 				$obj->merge($params,$changes);
 				$obj->upsertAncestors($params);
-				$obj->insert($qb->db);
+				$obj->update($qb->db);
 			}else
 				throw $e;
 		}
@@ -617,30 +612,40 @@ class DTModel implements arrayaccess {
 	}
 	
 	public function getA($class,$column){
+		
 		try{
 			return new $class($this->db->filter(array($class::$primary_key_column=>$this[$column])));
 		}catch(Exception $e){}
 		return null;
 	}
 	
-	/** this does an immidiate upsert
+	/** this does an immediate upsert
+		@param name - the name of the manifest entry
+		@param params - the attributes to match/upsert. Defaults to full match on post-accessor storage properties
 		@return returns the primary key of the new object */
-	public function setA($val,$class,$column){
-		$obj = $class::upsert($this->db->filter($value),$value);
-		return $obj[$class::$primary_key_column];
+	public function setA($name,$params=null){
+		$manifest = static::hasAManifest();
+		$class = $manifest[$name][0];
+		$col = $manifest[$name][1];
+		if(!isset($params)) //default to exact match on preprocessed params
+			$params = $class::processForStorage($this->input,$this->db);
+		$obj = $class::upsert($this->db->filter($params),$params);
+		$this[$col] = $obj[$class::$primary_key_column];
+		return $obj;
 	}
 	
-	/*public function hasMany($class,$column){
-		return $class::select($this->db->filter(array($column=>static::$primary_key_column)));
+	/**
+		runs a set of parameters through model-building logic, handy for upserts that require transformation
+		@return returns the model-processed properties ready for storage
+	*/
+	public static function processForStorage($params,$db){
+		$obj = new static(array("db"=>$db));
+		$obj->merge($params);
+		$properties = $obj->storageProperties($db);
+		unset($properties[static::$primary_key_column]);
+		$clean = new DTParams($properties);
+		return $clean->allParams();
 	}
-	
-	public function nameFrom($class,$by,$column="name"){
-		try{
-			$obj = $this->hasA($class,$by);
-				return $obj[$column];
-		}catch(Exception $e){}
-		return "";
-	}*/
 	
 	protected static function hasManyManifest(){
 		static $manifests = array();
@@ -651,6 +656,11 @@ class DTModel implements arrayaccess {
 			
 		}
 		return $manifests[get_called_class()];
+	}
+	
+	protected static function modelFor($name){
+		$manifest = static::hasManyManifest();
+		return $manifest[$name][count($manifest[$name])-1];
 	}
 	
 	protected static function hasAManifest(){
@@ -671,6 +681,17 @@ class DTModel implements arrayaccess {
 				$manifests[get_called_class()] = array_merge($manifests[get_called_class()],$parent::isAManifest());
 		}
 		return $manifests[get_called_class()];
+	}
+	
+	public static function aliasForParent($model){
+		$manifest = static::isAManifest();
+		$i = 0;
+		foreach($manifest as $k=>$class){
+			if($class==$model)
+				return $model."_".$i;
+			$i++;
+		}
+		return $model;
 	}
 	
 	protected static function columnForModel($model){
