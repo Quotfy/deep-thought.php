@@ -443,9 +443,9 @@ class DTModel implements arrayaccess {
 				$obj = new static();
 				$obj->setStore($qb->db);
 				$obj->merge($defaults); //use the accessor for defaults
-				$obj->insert($qb->db);
 				$obj->merge($params,$changes);
 				$obj->upsertAncestors($params);
+				$obj->insert($qb->db);
 				$obj->update($qb->db);
 			}else
 				throw $e;
