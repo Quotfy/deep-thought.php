@@ -45,6 +45,11 @@ class DTSQLiteDatabase extends DTStore{
 		$parts = parse_url($dsn);
 		$database = $parts["path"];
 		$this->conn = new \SQLite3($database);
+		$this->conn->createFunction('LEVENSHTEIN', 'DTSQLiteDatabase::levenschtein', 2);
+	}
+	
+	public static function levenshtein($a, $b){
+		return levenshtein($a, $b);
 	}
 	
 	/**
