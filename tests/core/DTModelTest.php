@@ -180,12 +180,12 @@ END;
 	
 	public function testUpsertManyByIDWithParams(){
 		$a_filter = $this->db->filter(array("id"=>1));
-		$test = new ModelA($a_filter);
 		ModelA::upsert($a_filter,array("c_list"=>array(
 			array("id"=>1,"name"=>"C1"),
 			array("id"=>2,"name"=>"C2"),
 			array("id"=>3,"name"=>"C4")
 		)));
+		$test = new ModelA($a_filter);
 		$this->assertEquals("C1",$test["c_list"][0]["name"]);
 		$this->assertEquals("C2",$test["c_list"][1]["name"]);
 		$this->assertNotEquals("C3",$test["c_list"][2]["name"]);
