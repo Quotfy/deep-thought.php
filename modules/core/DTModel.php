@@ -239,7 +239,7 @@ class DTModel implements arrayaccess {
 		@param builder_f an optional user function to transform the upsert parameters (default behavior is to match to the primary key column)	
 		@return returns the entries from the final link (should match getMany)
 	*/
-	public function setMany($chainOrName,$vals,$filter_f=null,$builder_f=null){		
+	public function setMany($chainOrName,$vals,$builder_f=null){		
 		$chain = $chainOrName;
 	    if(!is_array($chainOrName)){
 		    $manifest = $this->hasManyManifest();
@@ -250,15 +250,12 @@ class DTModel implements arrayaccess {
 	    $link = explode(".",$chain[count($chain)-1]);
 	    $target_class = $link[0];
 		$key = $target_class::$primary_key_column;
-		if(!isset($filter_f)){
-			$filter_f = function($out,$i) use ($key){
+		if(!isset($builder_f)){
+			$builder_f = function($out,$i) use ($key){
 				$out[] = is_array($i)?$i:array($key=>$i);
 				return $out;
 			};
 		}
-		if(!isset($builder_f))
-			$builder_f = $filter_f;
-		$filters = array_reduce($vals,$filter_f,array());
 		$params = array_reduce($vals,$builder_f,array());
 		
 		$defaults = array();
@@ -280,8 +277,8 @@ class DTModel implements arrayaccess {
 			$stale = $stale_sets[$model];
 			$default_v = (isset($defaults[$model]))?$defaults[$model]:0;
 			$last_params = array();
-			foreach($params as $i=>$p){
-				$f = $filters[$i];
+			$i = 0;
+			foreach($params as $p){
 				$v = array_values($p)[0];
 				// if $nextmodel hasMany $model, hook up col=>nextmodel.key
 				 if($col!=$model::$primary_key_column){
@@ -290,7 +287,7 @@ class DTModel implements arrayaccess {
 					else //default (for new entries) is to link to the first entry from the previous table
 						$p[$col] = $default_v;
 				}
-				$obj = $model::upsert($this->db->filter($f),$p);
+				$obj = $model::upsert($this->db->filter($p),$p);
 				if($first_link) //we're doing the last table
 					$inserted[] = $obj;
 				unset($stale[$obj[$model::$primary_key_column]]);
@@ -447,9 +444,9 @@ class DTModel implements arrayaccess {
 				$obj = new static();
 				$obj->setStore($qb->db);
 				$obj->merge($defaults); //use the accessor for defaults
-				$obj->merge($params,$changes);
-				$obj->upsertAncestors($params);
 				$obj->insert($qb->db);
+				$obj->merge($params,$changes); //this has to happen after insertion to have the id available for setMany
+				$obj->upsertAncestors($params);
 				$obj->update($qb->db);
 			}else
 				throw $e;
