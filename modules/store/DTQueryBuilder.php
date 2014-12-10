@@ -223,9 +223,9 @@ class DTQueryBuilder{
 			$cols_str = implode(",",array_keys($properties));
 			$vals_str = implode(",",array_map(function($v){return DTQueryBuilder::formatValue($v);},array_values($properties)));
 			$stmt = "INSERT INTO {$this->from_clause} ({$cols_str}) VALUES ({$vals_str});";
-			return  $this->db->insert($stmt);
+			return $this->db->insert($stmt);
 		}
-		return false;
+		return $this->db->insertEmpty($this->from_clause);
 	}
 	
 	public function delete(){

@@ -70,13 +70,20 @@ class DTMySQLDatabase extends DTStore{
 		if($this->conn==null)
 			return;
 		$result = $this->conn->query($query);
-		if(!$result)
-			DTLog::error("Failed query: ".$this->conn->error."\n{$query}");
+		if(!$result){
+			DTLog::error("Failed query: %s",$this->conn->error);
+			DTLog::debug($query);
+			DTLog::debug(DTLog::lastBacktrace());
+		}
 	}
 	
 	public function insert($query){
 		$this->query($query);
 		return $this->lastInsertID();
+	}
+	
+	public function insertEmpty($table){
+		return $this->insert("INSERT INTO {$table} () VALUES ()");
 	}
 	
 	public function lastInsertID(){

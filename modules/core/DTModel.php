@@ -48,6 +48,8 @@ class DTModel implements arrayaccess {
     protected $_properties = array(); /** @internal */
     protected $_bypass_accessors = false; /** @internal a flag used to bypass accessors during construction */
     
+    protected $_unsanitary = true;
+    
     /**
     	@param paramsOrQuery - an assoc. array of default properties or DTQueryBuilder object
     */
@@ -346,8 +348,11 @@ class DTModel implements arrayaccess {
 		if(count($cols)==0)
 			DTLog::error("Found 0 columns for table (".static::$storage_table.")");
 		foreach($cols as $k){
-			if($purpose!="insert"||$k!=static::$primary_key_column) //don't try to insert the id, assume it's autoincrementing
-				$storage_params[$k] = $this[$k];
+			if($purpose!="insert"||$k!=static::$primary_key_column){ //don't try to insert the id, assume it's autoincrementing
+				$val = $this[$k];
+				if($val!==null) //we don't want to unset columns we don't control (subsetted models)
+					$storage_params[$k] = $val;
+			}
 		}
 		return array_merge($defaults,$storage_params);
 	}
@@ -359,7 +364,9 @@ class DTModel implements arrayaccess {
 		$db = isset($db)?$db:$this->db;
 		$p = new DTParams($this->storageProperties($db,array(),"reinsertion"));
 		$clean = $p->allParams();
-		$this->merge($clean);
+		foreach($clean as $k=>$v)
+			$this[$k] = $v;
+		$this->_unsanitary = false;
 	}
 	
 	/** attempts to set each property as defined in +params+ (but never merges id property)
@@ -397,7 +404,8 @@ class DTModel implements arrayaccess {
 		$db = (isset($db)?$db:$this->db);
 		$this->setStore($db);
 		$qb = (isset($qb)?$qb:new DTQueryBuilder($db)); //allow the query builder to be passed, in case it's a subclass
-		$new_id = $qb->from(static::$storage_table)->insert($this->storageProperties($db,array(),"insert"));
+		$properties = $this->storageProperties($db,array(),"insert");
+		$new_id = $qb->from(static::$storage_table)->insert($properties);
 		$this[static::$primary_key_column] = $new_id;
 		return $new_id;
 	}
@@ -407,6 +415,11 @@ class DTModel implements arrayaccess {
 		@note uses the object's id property for where-clause, unless query-builder is passed
 	*/
 	public function update(DTStore $db=null,$qb=null){
+		if($this->_unsanitary){
+			DTLog::warn(DTLog::colorize(get_called_class()." updated without calling clean()"),"warn");
+			DTLog::debug($this);
+			DTLog::debug(DTLog::lastBacktrace());
+		}
 		$db = (isset($db)?$db:$this->db);
 		$qb = isset($qb)?$qb:$db->filter(array(static::$primary_key_column=>$this[static::$primary_key_column]));
 		$properties = $this->storageProperties($db,array(),"update");
@@ -443,6 +456,7 @@ class DTModel implements arrayaccess {
 			if($e->getCode()==1){ //the record doesn't exist, insert it instead
 				$obj = new static();
 				$obj->setStore($qb->db);
+				$obj->clean($qb->db);
 				$obj->merge($defaults); //use the accessor for defaults
 				$obj->insert($qb->db);
 				$obj->merge($params,$changes); //this has to happen after insertion to have the id available for setMany
@@ -644,8 +658,9 @@ class DTModel implements arrayaccess {
 		$obj->merge($params);
 		$properties = $obj->storageProperties($db);
 		unset($properties[static::$primary_key_column]);
-		$clean = new DTParams($properties);
-		return $clean->allParams();
+		return $properties;
+		//$clean = new DTParams($properties); //the params should already be cleaned before they are sent here
+		//return $clean->allParams();
 	}
 	
 	protected static function hasManyManifest(){

@@ -54,7 +54,7 @@ class DTParams implements arrayaccess{
         unset($this->params[$offset]);
     }
     public function offsetGet($offset) {
-    	return $this->params[$offset];
+    	return isset($this->params[$offset])?$this->params[$offset]:null;
     }
 	
 //======================

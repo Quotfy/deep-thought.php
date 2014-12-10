@@ -313,6 +313,10 @@ abstract class DTStore{
 		return $this->lastInsertID();
 	}
 	
+	public function insertEmpty($table){
+		return $this->insert("INSERT INTO {$table} DEFAULT VALUES");
+	}
+	
 	/**
 	 * prepare a statement.
 	 * 
