@@ -281,7 +281,8 @@ class DTModel implements arrayaccess {
 			$last_params = array();
 			$i = 0;
 			foreach($params as $p){
-				$v = array_values($p)[0];
+				$vs=array_values($p);
+				$v = $vs[0];
 				// if $nextmodel hasMany $model, hook up col=>nextmodel.key
 				 if($col!=$model::$primary_key_column){
 					if(isset($stale[$v]))
