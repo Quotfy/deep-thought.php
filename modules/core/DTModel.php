@@ -658,8 +658,6 @@ class DTModel implements arrayaccess {
 		$properties = $obj->storageProperties($db);
 		unset($properties[static::$primary_key_column]);
 		return $properties;
-		//$clean = new DTParams($properties); //the params should already be cleaned before they are sent here
-		//return $clean->allParams();
 	}
 	
 	protected static function hasManyManifest(){
