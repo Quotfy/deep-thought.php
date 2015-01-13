@@ -152,11 +152,10 @@ class DTModel implements arrayaccess {
 		return null;
     }
     
-    public function getDirty($offset){
-	 	if(isset($this->$offset) || isset($this->_properties[$offset])){
-		 	return $this[$offset];
-		}
-		return null;   
+    public function isDirty($offset){
+		if(in_array($offset,array_keys(get_class_vars(get_called_class()))) || in_array($offset,array_keys($this->_properties)))
+			return true;
+		return false;
 	}
     
     /**
@@ -282,7 +281,7 @@ class DTModel implements arrayaccess {
 			$i = 0;
 			foreach($params as $p){
 				$vs=array_values($p);
-				$v = $vs[0];
+                $v = (count($vs)>0)?$vs[0]:null;
 				// if $nextmodel hasMany $model, hook up col=>nextmodel.key
 				 if($col!=$model::$primary_key_column){
 					if(isset($stale[$v]))
@@ -350,9 +349,8 @@ class DTModel implements arrayaccess {
 			DTLog::error("Found 0 columns for table (".static::$storage_table.")");
 		foreach($cols as $k){
 			if($purpose!="insert"||$k!=static::$primary_key_column){ //don't try to insert the id, assume it's autoincrementing
-				$val = $this[$k];
-				if($val!==null) //we don't want to unset columns we don't control (subsetted models)
-					$storage_params[$k] = $val;
+				if($this->isDirty($k)) //we don't want to unset columns we don't control (subsetted models)
+					$storage_params[$k] = $this[$k];
 			}
 		}
 		return array_merge($defaults,$storage_params);

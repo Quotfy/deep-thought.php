@@ -62,6 +62,20 @@ END;
 		$this->assertEquals("red",$obj["color"]);
 	}
 	
+	public function testIsDirty(){
+		$obj = new TestModel($this->db->filter(array("id"=>1)));
+		$this->assertFalse($obj->isDirty("new_key"));
+		$obj["new_key"] = "dirty";
+		$this->assertTrue($obj->isDirty("new_key"));
+	}
+	
+	public function testSetToNull(){
+		$obj = new TestModel($this->db->filter(array("id"=>1)));
+		$obj["name"] = null;
+		$properties = $obj->storageProperties($this->db);
+		$this->assertTrue(in_array("name", array_keys($properties))&&$obj["name"]===null);
+	}
+	
 	public function testUpsertFromStorage(){
 		// 1. test recovery of parameters
 		$test = TestModel::upsert($this->db->filter(array("id"=>1)),array());
