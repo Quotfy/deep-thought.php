@@ -72,9 +72,9 @@ class DTLog{
 		$msg = array_shift($args);
 		if(!is_string($msg))
 			return static::colorize(is_array($msg)?json_encode($msg):(string)$msg,"INFO");
-		$strings = array_map(function($a){
-			return static::colorize(is_array($a)?json_encode($a):(string)$a,"INFO");
-		},$args);
+		$strings = array();
+		foreach($args as $a)
+			$strings[] = static::colorize(is_array($a)?json_encode($a):(string)$a,"INFO");
 		return vsprintf($msg,$strings);
 	}
 	
