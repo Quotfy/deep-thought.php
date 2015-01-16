@@ -455,8 +455,7 @@ class DTModel implements arrayaccess {
 			$obj->update($qb->db); //it's essential that this use *only* the +primary_key_column+
 		}catch(Exception $e){
 			if($e->getCode()==1){ //the record doesn't exist, insert it instead
-				$obj = new static();
-				$obj->setStore($qb->db);
+				$obj = new static(array("db"=>$qb->db)); //the store needs to be available in the constructor
 				$obj->clean($qb->db);
 				$obj->merge($defaults); //use the accessor for defaults
 				$obj->insert($qb->db);
