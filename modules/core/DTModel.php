@@ -454,11 +454,11 @@ class DTModel implements arrayaccess {
 		}catch(Exception $e){
 			if($e->getCode()==1){ //the record doesn't exist, insert it instead
 				$obj = new static(array("db"=>$qb->db)); //the store needs to be available in the constructor
-				$obj->clean($qb->db);
+				$obj->clean();
 				$obj->merge($defaults); //use the accessor for defaults
+				$obj->upsertAncestors($params); //must happen before insert
 				$obj->insert($qb->db);
 				$obj->merge($params,$changes); //this has to happen after insertion to have the id available for setMany
-				$obj->upsertAncestors($params);
 				$obj->update($qb->db);
 			}else
 				throw $e;
