@@ -210,7 +210,8 @@ class DTQueryBuilder{
 	
 	public function update(array $properties){
 		if(count($properties)>0){
-			$set_str = implode(",",array_map(function($k,$v) {return "{$k}=".DTQueryBuilder::formatValue($v);},array_keys($properties),$properties));
+			$col_esc = $this->db->col_esc;
+			$set_str = implode(",",array_map(function($k,$v) use ($col_esc) {return "{$col_esc}{$k}{$col_esc}=".DTQueryBuilder::formatValue($v);},array_keys($properties),$properties));
 			$stmt = "UPDATE {$this->from_clause} SET {$set_str} WHERE ".$this->buildWhereClause();
 			$this->db->query($stmt);
 			return true;
