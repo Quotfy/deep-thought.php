@@ -381,10 +381,11 @@ class DTModel implements arrayaccess {
 		$updated = 0;
 		foreach($params as $k=>$v){
 			$old_val = $this[$k];
+			$date_val = strtotime($old_val);
 			// don't set the primary key, no matter what anyone says
 			if($k!=static::$primary_key_column){
-				//don't record changes that don't affect storage
-				if(in_array($k, $cols) && $old_val!=$v){
+				//record changes that affect storage and are not equal (including identically represented dates)
+				if(in_array($k, $cols) && !($old_val==$v || strtotime($v)===$date_val)){
 					$changes["old"][$k] = $old_val;
 					$changes["new"][$k] = $v;
 				}
@@ -392,6 +393,7 @@ class DTModel implements arrayaccess {
 				$updated++;
 			}
 		}
+		$changes["summary"] = count($changes["old"])==0?(count($changes["new"]==0)?"none":"insert"):"update";
 		return $updated;
 	}
 	
