@@ -381,11 +381,10 @@ class DTModel implements arrayaccess {
 		$updated = 0;
 		foreach($params as $k=>$v){
 			$old_val = $this[$k];
-			$date_val = strtotime($old_val);
 			// don't set the primary key, no matter what anyone says
 			if($k!=static::$primary_key_column){
-				//record changes that affect storage and are not equal (including identically represented dates)
-				if(in_array($k, $cols) && !($old_val==$v || strtotime($v)===$date_val)){
+				//don't record changes that don't affect storage
+				if(in_array($k, $cols) && $old_val!=$v){
 					$changes["old"][$k] = $old_val;
 					$changes["new"][$k] = $v;
 				}
@@ -393,7 +392,6 @@ class DTModel implements arrayaccess {
 				$updated++;
 			}
 		}
-		$changes["summary"] = count($changes["old"])==0?(count($changes["new"]==0)?"none":"insert"):"update";
 		return $updated;
 	}
 	
@@ -458,9 +456,9 @@ class DTModel implements arrayaccess {
 				$obj = new static(array("db"=>$qb->db)); //the store needs to be available in the constructor
 				$obj->clean();
 				$obj->merge($defaults); //use the accessor for defaults
-				$obj->upsertAncestors($params); //must happen before insert
 				$obj->insert($qb->db);
 				$obj->merge($params,$changes); //this has to happen after insertion to have the id available for setMany
+				$obj->upsertAncestors($params); //must be after merge
 				$obj->update($qb->db);
 			}else
 				throw $e;
@@ -718,9 +716,5 @@ class DTModel implements arrayaccess {
 			}
 		}while(($model=get_parent_class($model))!=false);
 		return static::$primary_key_column; //we've got the relationship backward
-	}
-	
-	public function primaryKey(){
-		return $this[static::$primary_key_column];
 	}
 }
