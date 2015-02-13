@@ -717,4 +717,8 @@ class DTModel implements arrayaccess {
 		}while(($model=get_parent_class($model))!=false);
 		return static::$primary_key_column; //we've got the relationship backward
 	}
+	
+	public function primaryKey(){
+		return $this[static::$primary_key_column];
+	}
 }
