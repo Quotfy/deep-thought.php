@@ -617,6 +617,10 @@ class DTModel implements arrayaccess {
 	public function dateMDY($ts){
 		return isset($ts)?date("m/d/Y",strtotime($ts)):"";
 	}
+	
+	public function timeAM($ts){
+		return isset($ts)?date("h:iA",strtotime($ts)):"";
+	}
 		
 ///@}
 
