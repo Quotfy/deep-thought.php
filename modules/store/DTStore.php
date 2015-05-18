@@ -422,7 +422,9 @@ abstract class DTStore{
 	 * @return void
 	 */
 	public function commit(){
-		$this->query("COMMIT");
+		try{
+			$this->query("COMMIT");
+		}catch(Exception $e){} // ignore the commit if a transaction wasn't started
 	}
 	
 	/**
