@@ -32,6 +32,8 @@
  */
 
 class DTMySQLDatabase extends DTStore{
+	public $col_esc = "`";
+	
 	public function connect($dsn){
 		$parts = parse_url($dsn);
 		$user = $parts["user"];

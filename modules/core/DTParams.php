@@ -94,7 +94,10 @@ class DTParams implements arrayaccess{
 	}
 	
 	public function dateTimeParams($dateName,$timeName,$dateDefault=null,$timeDefault=null){
-		return $this->db->date(strtotime($this->param($dateName,$dateDefault)." ".$this->param($timeName,$timeDefault)));
+		$date = $this->param($dateName,$dateDefault);
+		if($date!=null)
+			return $this->db->date(strtotime($date." ".$this->param($timeName,$timeDefault)));
+		return null;
 	}
 	
 	public function checkboxParam($name){

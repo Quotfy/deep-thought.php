@@ -65,15 +65,19 @@ class DTPreparedQueryBuilder extends DTQueryBuilder{
 		return $wc;
 	}
 	
-	public function select1($cols="*"){
+	public function select($cols="*"){
 		$stmt_name = $this->stmt_name;
 		$this->prep_vals = array();
 		$stmt_name .= "_select1"; //make sure we don't conflict with insert stmt name in upsert
-		$this->limit("1");
 		$stmt = $this->selectStatement($cols);
 		if(!isset(static::$prepared_statements[$stmt_name]))
 				static::$prepared_statements[$stmt_name] = $this->db->prepareStatement($stmt,$stmt_name);
-		$rows = $this->db->execute(static::$prepared_statements[$stmt_name],$this->prep_vals);
+		return $this->db->execute(static::$prepared_statements[$stmt_name],$this->prep_vals);
+	}
+	
+	public function select1($cols="*"){
+		$this->limit(1);
+		$rows = $this->select($cols);
 		if(count($rows)>0){
 			return $rows[0];
 		}

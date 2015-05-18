@@ -454,11 +454,11 @@ class DTModel implements arrayaccess {
 		}catch(Exception $e){
 			if($e->getCode()==1){ //the record doesn't exist, insert it instead
 				$obj = new static(array("db"=>$qb->db)); //the store needs to be available in the constructor
-				$obj->clean($qb->db);
+				$obj->clean();
 				$obj->merge($defaults); //use the accessor for defaults
 				$obj->insert($qb->db);
 				$obj->merge($params,$changes); //this has to happen after insertion to have the id available for setMany
-				$obj->upsertAncestors($params);
+				$obj->upsertAncestors($params); //must be after merge
 				$obj->update($qb->db);
 			}else
 				throw $e;
@@ -617,6 +617,10 @@ class DTModel implements arrayaccess {
 	public function dateMDY($ts){
 		return isset($ts)?date("m/d/Y",strtotime($ts)):"";
 	}
+	
+	public function timeAM($ts){
+		return isset($ts)?date("h:iA",strtotime($ts)):"";
+	}
 		
 ///@}
 
@@ -716,5 +720,9 @@ class DTModel implements arrayaccess {
 			}
 		}while(($model=get_parent_class($model))!=false);
 		return static::$primary_key_column; //we've got the relationship backward
+	}
+	
+	public function primaryKey(){
+		return $this[static::$primary_key_column];
 	}
 }

@@ -37,6 +37,7 @@ abstract class DTStore{
 	public $readonly;
 	public $dbname;
 	public $ilike = "LIKE"; //keyword for case-insensitive search
+	public $col_esc = "\"";
 	public $conn = null;
 	
 	/**
