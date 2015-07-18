@@ -189,6 +189,27 @@ class DTSQLiteDatabase extends DTStore{
 	}
 	
 	/**
+	 * get a generic type for +$table_name+.+$column_name+.
+	 * 
+	 * @access public
+	 * @abstract
+	 * @param string $table_name
+	 * @param string $column_name
+	 * @retval string returns the column type
+	 */
+	public function typeForColumn($table_name,$column_name){
+		$types = $this->typesForTable($table_name);
+		if(isset($types[$column_name]))
+			return $types[$column_name];
+		return "text";
+	}
+	
+	public function typesForTable($table_name){
+		return array_reduce($this->select("PRAGMA table_info(`{$table_name}`)"),
+			function($rV,$cV) { $rV[$cV['name']]=$cV['type']; return $rV; },array());
+	}
+	
+	/**
 	 * get the list of all the tables.
 	 * 
 	 * @access public

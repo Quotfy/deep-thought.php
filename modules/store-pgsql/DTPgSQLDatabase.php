@@ -123,6 +123,18 @@ class DTPgSQLDatabase extends DTStore{
 			function($row,$item) { $row[]=$item['column_name']; return $row; },array());
 	}
 	
+	public function typeForColumn($table_name,$column_name){
+		$types = $this->typesForTable($table_name);
+		if(isset($types[$column_name]))
+			return $types[$column_name];
+		return "text";
+	}
+	
+	public function typesForTable($table_name){
+		return array_reduce( $this->select("select column_name, data_type from information_schema.columns where table_name='{$table_name}'"),
+			function($row,$item) { $row[$item['column_name']]=$item['column_name']; return $row; },array());
+	}
+	
 	public function allTables(){
 		return array_reduce($this->select("SELECT relname FROM pg_stat_user_tables ORDER BY relname"),
 			function($row,$item) { $row[]=$item["relname"]; return $row; }, array());
