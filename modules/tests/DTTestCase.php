@@ -34,6 +34,11 @@
 class DTTestCase extends \PHPUnit_Framework_TestCase{
 	protected $db=null; /** the test store, initialized before each test by +initSQL()+ */
 	protected $production_store; /** reference to the first production store */
+	
+	function __construct(){
+		@session_start(); // don't complain about tests trying to start the session after phpunit's output
+		parent::__construct();
+	}
 
 	public function setup(){
 		// swap out the production schema for our test schema
