@@ -132,7 +132,7 @@ class DTPgSQLDatabase extends DTStore{
 	
 	public function typesForTable($table_name){
 		return array_reduce( $this->select("select column_name, data_type from information_schema.columns where table_name='{$table_name}'"),
-			function($row,$item) { $row[$item['column_name']]=$item['column_name']; return $row; },array());
+			function($row,$item) { $row[$item['column_name']]=$item['data_type']; return $row; },array());
 	}
 	
 	public function allTables(){
