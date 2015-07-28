@@ -137,6 +137,18 @@ class DTMySQLDatabase extends DTStore{
 		return null;
 	}
 	
+	public function typeForColumn($table_name,$column_name){
+		$types = $this->typesForTable($table_name);
+		if(isset($types[$column_name]))
+			return $types[$column_name];
+		return "text";
+	}
+	
+	public function typesForTable($table_name){
+		return array_reduce($this->select("SHOW columns FROM `{$table_name}`"),
+			function($rV,$cV) { $rV[$cV['Field']]=$cV['Type']; return $rV; },array());
+	}
+	
 	public function allTables(){ 
 		return array_reduce($this->select("SELECT table_name FROM information_schema.tables WHERE table_schema='{$this->dbname}'"), //this pulls ALL the tables (all databases)
 			function($row,$item) { $row[]=$item['table_name']; return $row; },array());

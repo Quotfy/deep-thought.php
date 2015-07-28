@@ -33,6 +33,7 @@
 
 abstract class DTStore{
 	public $tables = array(); //internal storage for loaded data
+	public $table_types = array(); //internal storage for loaded data types
 	public $dsn=null;
 	public $readonly;
 	public $dbname;
@@ -92,7 +93,9 @@ abstract class DTStore{
 	 * @return void
 	 */
 	public static function copy(DTStore $store){
-		return new static($store->tables);
+		$copy = new static($store->tables);
+		$copy->table_types = $store->table_types;
+		return $copy;
 	}
 	
 	/**
@@ -143,31 +146,38 @@ abstract class DTStore{
 		$permanent_tables = $this->allTables();
 		foreach($this->tables as $table=>$t){
 			if(!in_array($table,$permanent_tables)){ //make sure we skip existing tables
-				$insert_vals = array(); $all_cols = array(); $insert_cols = array();
-				foreach($t as $row){
-					$vals = array(); $cols = array();
-					foreach($row as $c=>$v){
-						$cols[] = $c;
-						if(!is_array($v)) //do our best to clean what's going in
-							$v = $this->clean($v);
-						$vals[] = DTQueryBuilder::formatValue($v); //collect values
-						if(!in_array($c,$all_cols))
-							$all_cols[] = $c; //merge into all_cols (we could store type info)
-					}
-					$insert_vals[] = implode(",",$vals);
-					$insert_cols[] = implode(",",$cols);
-				}
-				//  create the table (for now, all columns are text)
-				$create_cols = implode(",",array_map(function($c){ return "{$c} text"; },$all_cols));
-				$stmt = "CREATE TABLE \"{$table}\" ({$create_cols});";
-				$this->query($stmt);
-				//  insert all rows (can't use prepared, cause we don't know how many cols)
-				foreach($t as $i=>$row){
-					$stmt = "INSERT INTO \"{$table}\" ({$insert_cols[$i]}) VALUES ({$insert_vals[$i]});";
-					$this->insert($stmt);
-				}
+				$this->query($this->tableSQL($table));
 			}
 		}
+	}
+	
+	public function tableSQL($table){
+		$t = $this->tables[$table];
+		$sql = "";
+		$insert_vals = array(); $all_cols = array(); $insert_cols = array();
+		foreach($t as $row){
+			$vals = array(); $cols = array();
+			foreach($row as $c=>$v){
+				$cols[] = $c;
+				if(!is_array($v)) //do our best to clean what's going in
+					$v = $this->clean($v);
+				$vals[] = DTQueryBuilder::formatValue($v); //collect values
+				if(!in_array($c,$all_cols))
+					$all_cols[] = $c; //merge into all_cols (we could store type info)
+			}
+			$insert_vals[] = implode(",",$vals);
+			$insert_cols[] = implode(",",$cols);
+		}
+		//  create the table (for now, all columns are text)
+		$create_cols = implode(",",array_map(function($c) use ($table){ return "{$c} ".$this->table_types[$table][$c]; },$all_cols));
+		$sql .= "CREATE TABLE \"{$table}\" ({$create_cols});\n";
+		//$this->query($stmt);
+		//  insert all rows (can't use prepared, cause we don't know how many cols)
+		foreach($t as $i=>$row){
+			$sql .= "INSERT INTO \"{$table}\" ({$insert_cols[$i]}) VALUES ({$insert_vals[$i]});\n";
+			//$this->insert($stmt);
+		}
+		return $sql;
 	}
 	
 	/**
@@ -181,8 +191,8 @@ abstract class DTStore{
 			return false;
 		//for each table in the database
 		foreach($this->allTables() as $table){
-			$stmt = "SELECT * FROM {$table}";
-			$this->tables[$table] = $this->select($stmt);
+			$this->tables[$table] = $this->select("SELECT * FROM {$table}");
+			$this->table_types[$table] = $this->typesForTable($table);
 		}
 	}
 ///@}
@@ -240,6 +250,24 @@ abstract class DTStore{
 	 * @retval array returns an array column names
 	 */
 	abstract public function columnsForTable($table_name);
+	
+	/**
+	 * get a generic type for +$table_name+.+$column_name+.
+	 * 
+	 * @access public
+	 * @abstract
+	 * @param string $table_name
+	 * @param string $column_name
+	 * @retval string returns the column type
+	 */
+	public function typeForColumn($table_name,$column_name){
+		return "text";
+	}
+	
+	public function typesForTable($table_name){
+		return array_reduce($this->columnsForTable($table_name),
+			function($rV,$cV) { $rV[$cV]="text"; return $rV; },array());
+	}
 	
 	/**
 	 * get a list of all the tables.
