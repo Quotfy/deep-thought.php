@@ -52,9 +52,31 @@ class DTPgSQLDatabase extends DTStore{
 			DTLog::error("Query failed:".pg_last_error()."\n{$query}");
 			return array();
 		}
-		$rows = @pg_fetch_all($result);
+		/*$rows = @pg_fetch_all($result);
 		if(!$rows){
 			$rows = array();
+		}*/
+		// we want to get the correct types for the values, so we have to do this by hand...
+		$types = array();
+		$numfields = @pg_num_fields($result);
+		for($i=0;$i<$numfields;$i++)
+			$types[@pg_field_name($result,$i)] = @pg_field_type($result,$i);
+		$rows = array();
+		while($row=@pg_fetch_assoc($result)){
+			foreach($row as $k=>$v){
+				switch($types[$k]){
+					case "int2":
+					case "int4":
+						$row[$k] = (int) $v;
+						break;
+					case "double precision":
+						$row[$k] = (double) $v;
+						break;
+					default:
+						$row[$k] = $v;
+				}
+			}
+			$rows[] = $row;
 		}
 		return $rows;
 	}
