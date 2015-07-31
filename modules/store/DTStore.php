@@ -151,10 +151,11 @@ abstract class DTStore{
 		}
 	}
 	
-	public function tableSQL($table){
+	public function tableSQL($table,$structure_only=false){
 		$t = $this->tables[$table];
 		$sql = "";
 		$insert_vals = array(); $all_cols = array(); $insert_cols = array();
+		$all_cols = $this->columnsForTable($table);
 		foreach($t as $row){
 			$vals = array(); $cols = array();
 			foreach($row as $c=>$v){
@@ -162,20 +163,18 @@ abstract class DTStore{
 				if(!is_array($v)) //do our best to clean what's going in
 					$v = $this->clean($v);
 				$vals[] = DTQueryBuilder::formatValue($v); //collect values
-				if(!in_array($c,$all_cols))
-					$all_cols[] = $c; //merge into all_cols (we could store type info)
 			}
 			$insert_vals[] = implode(",",$vals);
 			$insert_cols[] = implode(",",$cols);
 		}
-		//  create the table (for now, all columns are text)
-		$create_cols = implode(",",array_map(function($c) use ($table){ return "{$c} ".$this->table_types[$table][$c]; },$all_cols));
+		//  create the table
+		$create_cols = implode(",",array_map(function($c) use ($table){ return "{$this->col_esc}{$c}{$this->col_esc} ".$this->table_types[$table][$c]; },$all_cols));
 		$sql .= "CREATE TABLE \"{$table}\" ({$create_cols});\n";
-		//$this->query($stmt);
 		//  insert all rows (can't use prepared, cause we don't know how many cols)
-		foreach($t as $i=>$row){
-			$sql .= "INSERT INTO \"{$table}\" ({$insert_cols[$i]}) VALUES ({$insert_vals[$i]});\n";
-			//$this->insert($stmt);
+		if(!$structure_only){
+			foreach($t as $i=>$row){
+				$sql .= "INSERT INTO \"{$table}\" ({$insert_cols[$i]}) VALUES ({$insert_vals[$i]});\n";
+			}
 		}
 		return $sql;
 	}
