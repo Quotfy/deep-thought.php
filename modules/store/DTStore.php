@@ -146,16 +146,22 @@ abstract class DTStore{
 		$permanent_tables = $this->allTables();
 		foreach($this->tables as $table=>$t){
 			if(!in_array($table,$permanent_tables)){ //make sure we skip existing tables
-				$this->query($this->tableSQL($table));
+				//update types
+				$row = $t[0];
+				foreach($row as $k=>$v){
+					$this->table_types[$table][$k] = isset($this->table_types[$table][$k])?$this->table_types[$table][$k]:"text";
+				}
+				$this->query($this->tableSQL($table,false,true));
 			}
 		}
 	}
 	
-	public function tableSQL($table,$structure_only=false){
+	public function tableSQL($table,$structure_only=false,$internal=false){
 		$t = $this->tables[$table];
 		$sql = "";
 		$insert_vals = array(); $all_cols = array(); $insert_cols = array();
-		$all_cols = $this->columnsForTable($table);
+		$all_cols = $internal?array_keys($this->tables[$table][0]):$this->columnsForTable($table);
+		$all_types = $internal?$this->table_types[$table]:$this->typesForTable($table);
 		foreach($t as $row){
 			$vals = array(); $cols = array();
 			foreach($row as $c=>$v){
@@ -168,7 +174,7 @@ abstract class DTStore{
 			$insert_cols[] = implode(",",$cols);
 		}
 		//  create the table
-		$create_cols = implode(",",array_map(function($c) use ($table){ return "{$this->col_esc}{$c}{$this->col_esc} ".$this->table_types[$table][$c]; },$all_cols));
+		$create_cols = implode(",",array_map(function($c) use ($table,$all_types){ return "{$this->col_esc}{$c}{$this->col_esc} ".$all_types[$c]; },$all_cols));
 		$sql .= "CREATE TABLE \"{$table}\" ({$create_cols});\n";
 		//  insert all rows (can't use prepared, cause we don't know how many cols)
 		if(!$structure_only){
