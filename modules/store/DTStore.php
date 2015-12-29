@@ -157,7 +157,7 @@ abstract class DTStore{
 	}
 	
 	public function tableSQL($table,$structure_only=false,$internal=false){
-		$t = $this->tables[$table];
+		$t = $internal?$this->tables[$table]:$this->select("SELECT * FROM {$table}");
 		$sql = "";
 		$insert_vals = array(); $all_cols = array(); $insert_cols = array();
 		$all_cols = $internal?array_keys($this->tables[$table][0]):$this->columnsForTable($table);
@@ -194,11 +194,19 @@ abstract class DTStore{
 	public function pullTables(){
 		if(isset($this->tables)&&count($this->tables)>0)
 			return false;
-		//for each table in the database
-		foreach($this->allTables() as $table){
-			$this->tables[$table] = $this->select("SELECT * FROM {$table}");
-			$this->table_types[$table] = $this->typesForTable($table);
+		foreach($this->allTables() as $table){ //for each table in the database
+			$this->pullTable($table);
 		}
+	}
+	
+	public function pullTable($table){
+		$this->tables[$table] = $this->select("SELECT * FROM {$table}");
+		$this->table_types[$table] = $this->typesForTable($table);
+	}
+	
+	public function purgeTable($table){
+		unset($this->tables[$table]);
+		unset($this->table_types[$table]);
 	}
 ///@}
 	
