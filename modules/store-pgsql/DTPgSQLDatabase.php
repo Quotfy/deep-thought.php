@@ -69,7 +69,7 @@ class DTPgSQLDatabase extends DTStore{
 					case "int4":
 						$row[$k] = (int) $v;
 						break;
-					case "double precision":
+					case "float8":
 						$row[$k] = (double) $v;
 						break;
 					default:
