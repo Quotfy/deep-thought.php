@@ -112,6 +112,17 @@ class DTParams implements arrayaccess{
 		return "";
 	}
 	
+	/**
+		parse a valid email address
+		@return returns the email address or null if not a valid address
+	*/
+	public function emailParam($name,$default=null){
+		$str = static::parseString($this->param($name,$default),$this->db);
+		if(filter_var($str,FILTER_VALIDATE_EMAIL))
+			return $str;
+		return null;
+	}
+	
 	public function arrayParam($name,$default=null){
 		return static::parseArray($this->param($name,$default),$this->db);
 	}
