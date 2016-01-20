@@ -171,6 +171,19 @@ class DTModel implements arrayaccess {
 		}
 	    if(!isset($qb))
 		    $qb = $this->db->qb();
+		    
+	    $qb = $this->getManyQB($chain,$qb,$target_class);
+	    return $target_class::select($qb,"{$target_class}.*");
+	}
+	
+	public function getManyQB($chainOrName,DTQueryBuilder $qb=null, &$target_class=null){
+		$chain = $chainOrName;
+	    if(!is_array($chainOrName)){
+		    $manifest = $this->hasManyManifest();
+		    $chain = $manifest[$chainOrName];
+		}
+	    if(!isset($qb))
+		    $qb = $this->db->qb();
 		
 		$link = explode(".",$chain[0]);
 	    $key_col = $link[0]::columnForModel(get_called_class());
@@ -201,8 +214,7 @@ class DTModel implements arrayaccess {
 			$last_model = $model;
 			$last_col = $col;
 		}
-	    $qb->filter(array("{$last_alias}.{$key_col}"=>$this[static::$primary_key_column]));
-	    return $target_class::select($qb,"{$target_class}.*");
+	   return $qb->filter(array("{$last_alias}.{$key_col}"=>$this[static::$primary_key_column]));
 	}
 	
 	/**
