@@ -119,7 +119,9 @@ class DTQueryBuilder{
 	/**
 		@return returns itself for chaining
 	*/
-	public function from($from_str){
+	public function from($from_str=null){
+		if(empty($from_str))
+			return $this->from_clause;
 		$this->from_clause = $from_str;
 		return $this;
 	}

@@ -52,6 +52,26 @@ CREATE TABLE table_d (
 INSERT INTO table_d (id,name,a_id,a2_id) VALUES (1,'D1',1,1);
 INSERT INTO table_d (id,name,a_id,a2_id) VALUES (2,'D2',1,2);
 
+CREATE TABLE table_aa (
+	id integer primary key autoincrement,
+	a_parent_id integer
+);
+INSERT INTO table_aa (id, a_parent_id) VALUES (3, 1);
+
+CREATE TABLE table_aaa (
+	id integer primary key autoincrement,
+	aa_parent_id integer
+);
+INSERT INTO table_aaa (id, aa_parent_id) VALUES (4, 3);
+
+CREATE TABLE table_e (
+	id integer PRIMARY KEY autoincrement,
+	name text,
+	aa_id int
+);
+INSERT INTO table_e (id,name,aa_id) VALUES (1,'E1',3);
+INSERT INTO table_e (id,name,aa_id) VALUES (2,'E2',3);
+
 END;
 	}
 	
@@ -139,9 +159,9 @@ END;
 	}
 	
 	public function testSetOne(){
-		$a = new ModelA(array("name"=>"testA"));
+		$a = ModelA::upsert($this->db->qb()->fail(),array("name"=>"testA"));
 		$test = new ModelB($this->db->filter(array("id"=>1)));
-		$test["a"] = $a;
+		$test->setA("a",array("name"=>"testA"));
 		$this->assertEquals("testA",$test["a"]["name"]);
 	}
 	
@@ -170,7 +190,7 @@ END;
 		ModelA::upsert($a_filter,array("c_list"=>array(1,2,4)));
 		$this->assertEquals("C1",$test["c_list"][0]["name"]);
 		$this->assertEquals("C2",$test["c_list"][1]["name"]);
-		$this->assertNotEquals("C3",$test["c_list"][2]["name"]);
+		$this->assertEquals("4",$test["c_list"][2]["id"]);
 	}
 	
 	public function testUpsertManyByIDOptimized(){
@@ -180,7 +200,7 @@ END;
 		ModelA::upsert($a_filter,array("c_list_optimized"=>array(1,2,4)));
 		$this->assertEquals("C1",$test["c_list_optimized"][0]["name"]);
 		$this->assertEquals("C2",$test["c_list_optimized"][1]["name"]);
-		$this->assertNotEquals("C3",$test["c_list_optimized"][2]["name"]);
+		$this->assertEquals("4",$test["c_list_optimized"][2]["id"]);
 	}
 	
 	public function testUpsertManyByIDDList(){
@@ -213,7 +233,41 @@ END;
 		$this->assertEquals("C2",$test["c_list"][1]["name"]);
 		$this->assertNotEquals("C3",$test["c_list"][2]["name"]);
 	}
+	
+	
+	/// test whether we capture the attributes of our parent
+	public function testParent(){
+		$aa_filter = $this->db->filter(array("ModelAA.id"=>3));
+		$test = new ModelAA($aa_filter);
+		$this->assertEquals("A1",$test["name"]);
+	}
 
+	/// test whether we capture the attributes of our grandparent
+	public function testGrandparent(){
+		$aaa_filter = $this->db->filter(array("ModelAAA.id"=>4));
+		$test = new ModelAAA($aaa_filter);
+		$this->assertEquals("A1",$test["name"]);
+	}
+	
+	public function testManyToManyViaParent(){
+		$aa_filter = $this->db->filter(array("ModelAA.id"=>3));
+		$test = new ModelAA($aa_filter);
+		$this->assertEquals("B1",$test["b_list"][0]["name"]);
+		$this->assertEquals("B2",$test["b_list"][1]["name"]);
+	}
+	
+	public function testManyToManyViaGrandparent(){
+		$aaa_filter = $this->db->filter(array("ModelAAA.id"=>4));
+		$test = new ModelAAA($aaa_filter);
+		
+		// this comes from the grandparent class
+		$this->assertEquals("B1",$test["b_list"][0]["name"]);
+		$this->assertEquals("B2",$test["b_list"][1]["name"]);
+		
+		// only the parent knows how to do this one
+		$this->assertEquals("E1",$test["e_list"][0]["name"]);
+		$this->assertEquals("E2",$test["e_list"][1]["name"]);
+	}
 }
 
 class TestModel extends DTModel{
@@ -292,4 +346,30 @@ class ModelD extends DTModel{
 	public $name;
 	public $a_id;
 	public $a2_id;
+}
+
+class ModelAA extends ModelA{
+	protected static $storage_table = "table_aa";
+	protected static $is_a_manifest = array(
+		"a_parent_id"=>"ModelA"
+	);
+	protected static $has_many_manifest = array(
+		"e_list"=>array("ModelE")	
+	);
+}
+
+class ModelAAA extends ModelAA{
+	protected static $storage_table = "table_aaa";
+	protected static $is_a_manifest = array(
+		"aa_parent_id"=>"ModelAA"
+	);
+}
+
+class ModelE extends DTModel{
+	protected static $storage_table = "table_e";
+	protected static $has_a_manifest = array(
+		"aa"=>array("ModelAA","aa_id")
+	);
+	public $name;
+	public $aa;
 }

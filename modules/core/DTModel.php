@@ -65,7 +65,7 @@ class DTModel implements arrayaccess {
 	    		$properties = $paramsOrQuery->select1("*, ".get_called_class().".*");
 	    	}
 	    	if(!isset($properties))
-    			throw new Exception("Failed to find ".get_called_class()." in storage.",1);
+    			throw new Exception("Failed to find ".get_called_class()." in storage.\n".$paramsOrQuery,1);
     	}
     	if(!isset($properties)){
     		DTLog::error("Invalid parameters used to construct DTModel (".json_encode($paramsOrQuery).")");
@@ -189,6 +189,7 @@ class DTModel implements arrayaccess {
 	    $key_col = $link[0]::columnForModel(get_called_class());
 	    if(count($link)>1)
 	    	$key_col = $link[1];
+	    $key_val = $this[static::$primary_key_column];
 	    $link = explode(".",array_pop($chain));
 	    $target_class = $link[0];
 	    
@@ -210,11 +211,23 @@ class DTModel implements arrayaccess {
 		    $alias = $model."_".count($chain);
 		    
 			$qb->join("{$model::$storage_table} {$alias}","{$last_alias}.{$last_col}={$alias}.{$col}");
+			
+			$qb = $model::isAQB($qb,$alias); //account for parent attributes
+			
 			$last_alias = $alias;
 			$last_model = $model;
 			$last_col = $col;
 		}
-	   return $qb->filter(array("{$last_alias}.{$key_col}"=>$this[static::$primary_key_column]));
+			
+		$qb = static::isAQB($qb); //account for parent attributes
+		
+		$manifest = $this->isAManifest();
+		if(count($manifest)>0){ // we need to use the parent class id
+			$qb->join(static::$storage_table." ".get_called_class(),get_called_class().".".static::$primary_key_column."=".$this[static::$primary_key_column]);
+		}else{ //use our own ID
+			$qb->filter(array("{$last_alias}.{$key_col}"=>$key_val));
+		}
+		return $qb;
 	}
 	
 	/**
@@ -307,8 +320,12 @@ class DTModel implements arrayaccess {
 				unset($stale[$obj[$model::$primary_key_column]]);
 				$last_params[]=($next_col!=$next_model::$primary_key_column)?array($next_col=>$obj[$col]):array($next_col=>$p[$col]);
 			}
-			if($delete_stale && count($stale)>0)
-				$model::deleteRows($this->db->filter(array($model::$primary_key_column=>array("IN",array_keys($stale)))));
+			if(count($stale)>0){
+				if($delete_stale)
+					$model::deleteRows($this->db->filter(array($model::$primary_key_column=>array("IN",array_keys($stale)))));
+				else if ($first_link) // we can't delete from the destination table, but we should unset the association
+					$model::updateRows($this->db->filter(array($model::$primary_key_column=>array("IN",array_keys($stale)))),array($col=>0));
+			}
 				
 			$delete_stale = true;
 			$first_link = false;
@@ -493,6 +510,11 @@ class DTModel implements arrayaccess {
 	/** called during instantiation from storage--override to modify QB */
 	public static function selectQB($qb){
 		$qb->from(static::$storage_table." ".get_called_class());
+		$qb = static::isAQB($qb);
+		return $qb;
+	}
+	
+	public static function isAQB(DTQueryBuilder $qb,$alias=null){
 		$manifest = static::isAManifest();
 		$i = 0;
 		foreach($manifest as $col=>$m){
@@ -501,7 +523,10 @@ class DTModel implements arrayaccess {
 			$dst_col = count($link)>1?$link[1]:$dst_model::$primary_key_column;
 			$dst_alias = "{$dst_model}_{$i}";
 			$dst = "{$dst_model::$storage_table} {$dst_alias}";
-			$qb->join($dst,"{$col}={$dst_alias}.{$dst_col}");
+			if(!isset($alias))
+				$alias = get_called_class();
+			$qb->join($dst,$alias.".{$col}={$dst_alias}.{$dst_col}");
+			$qb = $dst_model::isAQB($qb,$dst_alias); // also join in the parent's selectQB()
 			$i++;
 		}
 		return $qb;
@@ -705,8 +730,8 @@ class DTModel implements arrayaccess {
 		static $manifests = array();
 		if(!isset($manifests[get_called_class()])){
 			$manifests[get_called_class()] = static::$is_a_manifest;
-			if($parent=get_parent_class(get_called_class()))
-				$manifests[get_called_class()] = array_merge($manifests[get_called_class()],$parent::isAManifest());
+			/*if($parent=get_parent_class(get_called_class()))
+				$manifests[get_called_class()] = array_merge($manifests[get_called_class()],$parent::isAManifest());*/
 		}
 		return $manifests[get_called_class()];
 	}
