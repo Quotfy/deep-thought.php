@@ -112,6 +112,8 @@ class DTQueryBuilder{
 		@note values are not cleaned or processed before querying, use +formatValue()+ before calling this method with user input
 	 */
 	public function addColumns(Array $cols){
+		if(count(array_filter(array_keys($cols),'is_string')))
+			$cols = array_map(function($k,$v){ return "{$k} as {$v}"; }, array_keys($cols),$cols);
 		$this->columns = array_merge($this->columns,$cols);
 		return $this;
 	}
@@ -177,7 +179,8 @@ class DTQueryBuilder{
 	public function selectStatement($cols="*"){
 		$column_clause = $cols;
 		if(count($this->columns)>0)
-			$column_clause .= ", ".implode(",",array_map(function($k,$v){return "{$v} as {$k}";},array_keys($this->columns),$this->columns));
+			$column_clause .= ", ".implode(",",$this->columns);
+			//$column_clause .= ", ".implode(",",array_map(function($k,$v){return "{$v} as {$k}";},array_keys($this->columns),$this->columns));
 		return "SELECT {$column_clause} FROM {$this->from_clause} {$this->join_clause} WHERE ".$this->buildWhereClause()." {$this->group_by} {$this->having_clause} {$this->order_by} {$this->limit_clause}";
 	}
 	

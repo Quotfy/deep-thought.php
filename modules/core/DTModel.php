@@ -208,19 +208,18 @@ class DTModel implements arrayaccess {
 		    if(count($link)>1)
 		    	$col = $link[1];
 		    
-		    $alias = $model."_".count($chain);
-		    
-			$qb->join("{$model::$storage_table} {$alias}","{$last_alias}.{$last_col}={$alias}.{$col}");
+			$model_alias = $model."_".count($chain);
+			if(($owner_alias = $model::aliasForOwner($col))==null)
+				$owner_alias = $model_alias;
+			$qb->join("{$model::$storage_table} {$model_alias}","{$last_alias}.{$last_col}={$owner_alias}.{$col}");
+			$model::isAQB($qb,$model_alias);
 			
-			$qb = $model::isAQB($qb,$alias); //account for parent attributes
-			
-			$last_alias = $alias;
+			$last_alias = $model_alias;
 			$last_model = $model;
 			$last_col = $col;
 		}
 			
 		$qb = static::isAQB($qb); //account for parent attributes
-		
 		$manifest = $this->isAManifest();
 		if(count($manifest)>0){ // we need to use the parent class id
 			$qb->join(static::$storage_table." ".get_called_class(),get_called_class().".".static::$primary_key_column."=".$this[static::$primary_key_column]);
@@ -515,6 +514,8 @@ class DTModel implements arrayaccess {
 	}
 	
 	public static function isAQB(DTQueryBuilder $qb,$alias=null){
+		if(!isset($alias))
+			$alias = get_called_class();
 		$manifest = static::isAManifest();
 		$i = 0;
 		foreach($manifest as $col=>$m){
@@ -523,19 +524,30 @@ class DTModel implements arrayaccess {
 			$dst_col = count($link)>1?$link[1]:$dst_model::$primary_key_column;
 			$dst_alias = "{$dst_model}_{$i}";
 			$dst = "{$dst_model::$storage_table} {$dst_alias}";
-			if(!isset($alias))
-				$alias = get_called_class();
 			$qb->join($dst,$alias.".{$col}={$dst_alias}.{$dst_col}");
 			$qb = $dst_model::isAQB($qb,$dst_alias); // also join in the parent's selectQB()
+			//$qb->addColumns(array($dst_alias.".*")); // makes parent attributes available
 			$i++;
 		}
 		return $qb;
 	}
 	
+	/** traverses the is_a hierarchy for the attribute owner */
+	public static function aliasForOwner($col){
+		$ref = new ReflectionClass(get_called_class());
+		$publics = $ref->getProperties();
+		foreach($publics as $p){
+			if($p->name==$col)
+				return static::aliasForParent($p->class);
+		}
+		return null;
+	}
+	
 	public static function select(DTQueryBuilder $qb,$cols=null){
 		static::selectQB($qb);
 		$cols = isset($cols)?$cols:"*, ".get_called_class().".*";
-		return $qb->selectAs(get_called_class(),$cols);
+		$qb->addColumns(array($cols));
+		return $qb->selectAs(get_called_class());
 	}
 	
 	public static function selectKV(DTQueryBuilder $qb,$cols){
@@ -744,7 +756,9 @@ class DTModel implements arrayaccess {
 				return $model."_".$i;
 			$i++;
 		}
-		return $model;
+		if( $parent = get_parent_class(get_called_class()) )
+			return $parent::aliasForParent($model);
+		return null;
 	}
 	
 	protected static function columnForModel($model){
