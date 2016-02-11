@@ -173,7 +173,8 @@ class DTModel implements arrayaccess {
 		    $qb = $this->db->qb();
 		    
 	    $qb = $this->getManyQB($chain,$qb,$target_class);
-	    return $target_class::select($qb,"{$target_class}.*");
+	    // older versions of postgresql need the column name explicitly for the group by
+	    return $target_class::select($qb,"{$target_class}.{$target_class::$primary_key_column},{$target_class}.*");
 	}
 	
 	public function getManyQB($chainOrName,DTQueryBuilder $qb=null, &$target_class=null){
