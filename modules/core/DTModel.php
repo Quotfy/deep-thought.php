@@ -173,7 +173,6 @@ class DTModel implements arrayaccess {
 		    $qb = $this->db->qb();
 		    
 	    $qb = $this->getManyQB($chain,$qb,$target_class);
-	    // older versions of postgresql cannot handle a general * here
 	    return $target_class::select($qb,"{$target_class}.*");
 	}
 	
@@ -547,7 +546,9 @@ class DTModel implements arrayaccess {
 	
 	public static function select(DTQueryBuilder $qb,$cols=null){
 		static::selectQB($qb);
-		$cols = isset($cols)?$cols:"*, ".get_called_class().".*";
+	    // older versions of postgresql cannot handle a general * here (associated tables can't be grouped in)
+		//$cols = isset($cols)?$cols:"*, ".get_called_class().".*";
+		$cols = isset($cols)?$cols:get_called_class().".*";
 		$qb->addColumns(array($cols));
 		return $qb->selectAs(get_called_class());
 	}
