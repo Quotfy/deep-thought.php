@@ -62,7 +62,7 @@ class DTModel implements arrayaccess {
     		$this->db=$paramsOrQuery->db; //save where we came from
     		if(isset(static::$storage_table)){
     			$paramsOrQuery = static::selectQB($paramsOrQuery);
-	    		$properties = $paramsOrQuery->select1("*, ".get_called_class().".*");
+	    		$properties = $paramsOrQuery->select1(get_called_class().".*");
 	    	}
 	    	if(!isset($properties))
     			throw new Exception("Failed to find ".get_called_class()." in storage.\n".$paramsOrQuery,1);
@@ -173,8 +173,8 @@ class DTModel implements arrayaccess {
 		    $qb = $this->db->qb();
 		    
 	    $qb = $this->getManyQB($chain,$qb,$target_class);
-	    // older versions of postgresql need the column name explicitly for the group by
-	    return $target_class::select($qb,"{$target_class}.{$target_class::$primary_key_column},{$target_class}.*");
+	    // older versions of postgresql cannot handle a general * here
+	    return $target_class::select($qb,"{$target_class}.*");
 	}
 	
 	public function getManyQB($chainOrName,DTQueryBuilder $qb=null, &$target_class=null){
@@ -224,6 +224,7 @@ class DTModel implements arrayaccess {
 		$manifest = $this->isAManifest();
 		if(count($manifest)>0){ // we need to use the parent class id
 			$qb->join(static::$storage_table." ".get_called_class(),get_called_class().".".static::$primary_key_column."=".$this[static::$primary_key_column]);
+			$qb->addColumns(get_called_class().".*");// make sure we pull into the new attributes
 		}else{ //use our own ID
 			$qb->filter(array("{$last_alias}.{$key_col}"=>$key_val));
 		}
