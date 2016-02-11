@@ -549,8 +549,7 @@ class DTModel implements arrayaccess {
 	    // older versions of postgresql cannot handle a general * here (associated tables can't be grouped in)
 		//$cols = isset($cols)?$cols:"*, ".get_called_class().".*";
 		$cols = isset($cols)?$cols:get_called_class().".*";
-		$qb->addColumns(array($cols));
-		return $qb->selectAs(get_called_class());
+		return $qb->selectAs(get_called_class(),array($cols));
 	}
 	
 	public static function selectKV(DTQueryBuilder $qb,$cols){
