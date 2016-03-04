@@ -33,6 +33,7 @@
  
 class DTPgSQLDatabase extends DTStore{
 	public $ilike = "ILIKE";
+	public $escape = "'";
 
 	public function connect($dsn){
 		$parts = parse_url($dsn);

@@ -40,6 +40,7 @@ abstract class DTStore{
 	public $ilike = "LIKE"; //keyword for case-insensitive search
 	public $col_esc = "\"";
 	public $conn = null;
+	public $escape = "\\";
 	
 	/**
 	 * __construct function.
@@ -224,6 +225,14 @@ abstract class DTStore{
 	 * @retval string the cleaned value
 	 */
 	abstract public function clean($val);
+	
+	/**
+		remove escape characters
+		@brief useful when store encrypted data, which leaves escape characters intact
+	*/
+	public function unescape($val){
+		return preg_replace("/{$this->escape}(.)/","\\1",$val);
+	}
 
 	/**
 	 * executes a given query without expecting a result.
