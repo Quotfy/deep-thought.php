@@ -97,7 +97,7 @@ class DTModel implements arrayaccess {
 				//	this is necessary, because we need these objects hooked up	
 				$manifest = static::hasManyManifest();
 				if(isset($manifest[$offset])) //this is a set-many relationship
-					return $this->setMany($manifest[$offset],$value);
+					$value = $this->setMany($manifest[$offset],$value);
 				$manifest = static::hasAManifest();
 				if(isset($manifest[$offset])) //this is a has-a relationship
 					$value = $this->setA($offset);
