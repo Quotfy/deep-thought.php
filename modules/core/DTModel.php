@@ -241,9 +241,10 @@ class DTModel implements arrayaccess {
 		foreach($chain as $c){
 			$link = explode(".",$c);
 			$model = $link[0];
+			// get the column to back-link
 			$col = count($link)>1?$link[1]:$model::columnForModel($last_model);
+			// get the current primary key
 			$key = $model::$primary_key_column; //id
-			
 			$arr = array();
 			foreach($last_ids as $id=>$v){
 				$defaults[$model] = $id;
@@ -308,7 +309,7 @@ class DTModel implements arrayaccess {
 				$vs=array_values($p);
                 $v = (count($vs)>0)?$vs[0]:null;
 				// if $nextmodel hasMany $model, hook up col=>nextmodel.key
-				 if($col!=$model::$primary_key_column){
+				if($col!=$model::$primary_key_column){
 					if(isset($stale[$v]))
 						$p[$col] = $stale[$v];
 					else //default (for new entries) is to link to the first entry from the previous table
@@ -324,7 +325,8 @@ class DTModel implements arrayaccess {
 				if($delete_stale)
 					$model::deleteRows($this->db->filter(array($model::$primary_key_column=>array("IN",array_keys($stale)))));
 				else if ($first_link) // we can't delete from the destination table, but we should unset the association
-					$model::updateRows($this->db->filter(array($model::$primary_key_column=>array("IN",array_keys($stale)))),array($col=>0));
+					if($col!=$model::$primary_key_column) // need to clear our back-link
+						$model::updateRows($this->db->filter(array($model::$primary_key_column=>array("IN",array_keys($stale)))),array($col=>null));
 			}
 				
 			$delete_stale = true;

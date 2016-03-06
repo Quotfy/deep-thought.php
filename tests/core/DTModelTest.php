@@ -268,6 +268,18 @@ END;
 		$this->assertEquals("E1",$test["e_list"][0]["name"]);
 		$this->assertEquals("E2",$test["e_list"][1]["name"]);
 	}
+	
+	public function testClosure(){
+		$a = new ModelA($this->db->filter(array("id"=>1)));
+		
+		$default = array();
+		$closure = $a->closure(array("ModelAB","ModelB"),$default);
+		$this->assertEquals('{"ModelA":{"1":1},"ModelAB":{"1":1,"2":1},"ModelB":{"2":2,"1":1}}',json_encode($closure));
+		
+		$a["b_list_weak"] = array(1);
+		$b = new ModelB($this->db->filter(array("name"=>"B2")));
+		$this->assertEquals("2",$b["id"]); // make sure we haven't wiped out the B list
+	}
 }
 
 class TestModel extends DTModel{
