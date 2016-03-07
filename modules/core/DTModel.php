@@ -513,6 +513,7 @@ class DTModel implements arrayaccess {
 	public static function selectQB($qb){
 		$qb->from(static::$storage_table." ".get_called_class());
 		$qb = static::isAQB($qb);
+		$qb->addColumns(array(get_called_class().".*")); //make sure we get our own ID, not a subclass
 		return $qb;
 	}
 	
@@ -529,7 +530,7 @@ class DTModel implements arrayaccess {
 			$dst = "{$dst_model::$storage_table} {$dst_alias}";
 			$qb->join($dst,$alias.".{$col}={$dst_alias}.{$dst_col}");
 			$qb = $dst_model::isAQB($qb,$dst_alias); // also join in the parent's selectQB()
-			//$qb->addColumns(array($dst_alias.".*")); // makes parent attributes available
+			$qb->addColumns(array($dst_alias.".*")); // makes parent attributes available
 			$i++;
 		}
 		return $qb;
