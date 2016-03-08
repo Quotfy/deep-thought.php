@@ -185,6 +185,7 @@ class DTQueryBuilder{
 	}
 	
 	public function count($cols="*"){
+		$this->columns = array();
 		$stmt = $this->nestAs($cols,"dt_countable")->selectStatement("COUNT(*) as count");
 		$row = $this->db->select1($stmt);
 		return $row["count"];
