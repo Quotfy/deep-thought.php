@@ -513,7 +513,9 @@ class DTModel implements arrayaccess {
 	public static function selectQB($qb){
 		$qb->from(static::$storage_table." ".get_called_class());
 		$qb = static::isAQB($qb);
-		$qb->addColumns(array(get_called_class().".*")); //make sure we get our own ID, not a subclass
+		$manifest = static::isAManifest();
+		if(count($manifest)>0)
+			$qb->addColumns(array(get_called_class().".*")); //make sure we get our own ID, not a subclass
 		return $qb;
 	}
 	
