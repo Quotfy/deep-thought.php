@@ -113,7 +113,7 @@ class DTQueryBuilder{
 	 */
 	public function addColumns(Array $cols){
 		if(count(array_filter(array_keys($cols),'is_string')))
-			$cols = array_map(function($k,$v){ return "{$k} as {$v}"; }, array_keys($cols),$cols);
+			$cols = array_map(function($k,$v){ return "{$v} as {$k}"; }, array_keys($cols),$cols);
 		$this->columns = array_merge($this->columns,$cols);
 		return $this;
 	}
