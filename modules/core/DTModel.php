@@ -315,11 +315,18 @@ class DTModel implements arrayaccess {
 					else //default (for new entries) is to link to the first entry from the previous table
 						$p[$col] = $default_v;
 				}
-				$obj = $model::upsert($this->db->filter($p),$p);
+				if($first_link){ // don't try to set all the values unless we're at the target table
+					$vs = array_values($vals);
+					$up = is_array($vs[0])?$vals[$i]:$p;
+					$up[$col] = $p[$col];
+				}else
+					$up = $p;
+				$obj = $model::upsert($this->db->filter($p),$up);
 				if($first_link) //we're doing the last table
 					$inserted[] = $obj;
 				unset($stale[$obj[$model::$primary_key_column]]);
 				$last_params[]=($next_col!=$next_model::$primary_key_column)?array($next_col=>$obj[$col]):array($next_col=>$p[$col]);
+				$i++;
 			}
 			if(count($stale)>0){
 				if($delete_stale)
