@@ -41,8 +41,9 @@ class DTResponse{
 	public $obj;
 	protected $err = 0;
 	
-	function __construct($obj=null){
+	function __construct($obj=null,$err=0){
 		$this->obj = $obj;
+		$this->err = $err;
 	}
 	
 	public function setResponse($obj){
