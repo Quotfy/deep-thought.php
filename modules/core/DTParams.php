@@ -32,7 +32,7 @@
  */
 
 class DTParams implements arrayaccess{
-	protected $params;
+	public $params;
 	public $db;
 
 	function __construct(array $params=null,$db=null){

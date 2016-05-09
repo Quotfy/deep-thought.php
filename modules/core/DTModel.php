@@ -791,4 +791,8 @@ class DTModel implements arrayaccess {
 	public function primaryKey(){
 		return $this[static::$primary_key_column];
 	}
+	
+	public static function primaryKeyColumn(){
+		return static::$primary_key_column;
+	}
 }
