@@ -141,7 +141,7 @@ class DTLog{
 	 */
 	protected static function openOrCreate($log_type){
 		$config = DTSettingsConfig::sharedSettings();
-		static::$colorize = $config["logs"]["colorize"];
+		static::$colorize = isset($config["logs"]["colorize"])?$config["logs"]["colorize"]:"pml";
 		$file = isset($config,$config["logs"],$config["logs"][$log_type])
 			?$config["logs"][$log_type]:"php://output";
 		if(!substr_compare("php://", $file, 0)&&!file_exists($file)){
