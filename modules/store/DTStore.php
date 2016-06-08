@@ -158,7 +158,7 @@ abstract class DTStore{
 	}
 	
 	public function tableSQL($table,$structure_only=false,$internal=false){
-		$t = $internal?$this->tables[$table]:$this->select("SELECT * FROM {$table}");
+		$t = $internal?$this->tables[$table]:$this->select("SELECT * FROM {$table} ".($structure_only?"LIMIT 1":""));
 		$sql = "";
 		$insert_vals = array(); $all_cols = array(); $insert_cols = array();
 		$all_cols = $internal?array_keys($this->tables[$table][0]):$this->columnsForTable($table);
