@@ -219,7 +219,8 @@ class DTModel implements arrayaccess {
 			$last_col = $col;
 		}
 			
-		$qb = static::isAQB($qb); //account for parent attributes
+		// just like selectQB(), we need to have this done already for join conditions
+		//$qb = static::isAQB($qb); //account for parent attributes
 		$manifest = $this->isAManifest();
 		if(count($manifest)>0){ // we need to use the parent class id
 			$qb->join(static::$storage_table." ".get_called_class(),get_called_class().".".static::$primary_key_column."=".$this[static::$primary_key_column]);
@@ -519,7 +520,7 @@ class DTModel implements arrayaccess {
 	/** called during instantiation from storage--override to modify QB */
 	public static function selectQB($qb){
 		$qb->from(static::$storage_table." ".get_called_class());
-		$qb = static::isAQB($qb);
+		//$qb = static::isAQB($qb); //disabled because this needs to happen before other joins
 		$manifest = static::isAManifest();
 		if(count($manifest)>0)
 			$qb->addColumns(array(get_called_class().".*")); //make sure we get our own ID, not a subclass
@@ -789,5 +790,9 @@ class DTModel implements arrayaccess {
 	
 	public function primaryKey(){
 		return $this[static::$primary_key_column];
+	}
+	
+	public static function primaryKeyColumn(){
+		return static::$primary_key_column;
 	}
 }

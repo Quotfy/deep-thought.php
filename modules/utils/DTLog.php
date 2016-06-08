@@ -36,26 +36,38 @@ class DTLog{
 	public static $info_fp = null; ///destination for info messages
 	public static $debug_fp = null; ///destination for debug messages
 	public static $last_backtrace = null;
+	public static $colorize = null;
 	
 	/** emit major failure message */
 	public static function error($msg){
 		if(!isset(DTLog::$error_fp))
 			DTLog::$error_fp = static::openOrCreate("error_log");
 		$fmt_msg = static::formatMessage(func_get_args());
-		return DTLog::write(DTLog::$error_fp,$fmt_msg);
+		return DTLog::write(DTLog::$error_fp,$fmt_msg,"error");
 	}
 	
-	/** currently an alias for info **/
+	/** emit warnings **/
 	public static function warn($msg){
-		return DTLog::info($msg);
+		if(!isset(DTLog::$info_fp))
+			DTLog::$info_fp = static::openOrCreate("info_log");
+		$fmt_msg = static::formatMessage(func_get_args());
+		return DTLog::write(DTLog::$info_fp,$fmt_msg,"warn");
 	}
 	
-	/** emit warnings/information */
+	/** emit useful information */
 	public static function info($msg){
 		if(!isset(DTLog::$info_fp))
 			DTLog::$info_fp = static::openOrCreate("info_log");
 		$fmt_msg = static::formatMessage(func_get_args());
-		return DTLog::write(DTLog::$info_fp,$fmt_msg);
+		return DTLog::write(DTLog::$info_fp,$fmt_msg,"info");
+	}
+	
+	/** emit success updates **/
+	public static function success($msg){
+		if(!isset(DTLog::$info_fp))
+			DTLog::$info_fp = static::openOrCreate("info_log");
+		$fmt_msg = static::formatMessage(func_get_args());
+		return DTLog::write(DTLog::$info_fp,$fmt_msg,"success");
 	}
 	
 	/** only emits message if debug */
@@ -65,7 +77,7 @@ class DTLog{
 		$fmt_msg = static::formatMessage(func_get_args());
 		$e = new \Exception();
 		static::$last_backtrace = $e->getTraceAsString();
-		return DTLog::write(DTLog::$debug_fp,$fmt_msg);
+		return DTLog::write(DTLog::$debug_fp,$fmt_msg,"debug");
 	}
 	
 	protected static function formatMessage($args){
@@ -87,7 +99,7 @@ class DTLog{
 	 * @param string $msg
 	 * @return void
 	 */
-	protected static function write($fp,$msg){
+	protected static function write($fp,$msg,$code){
 		$bt = debug_backtrace();
 		$file = basename($bt[1]["file"]);
 		$line = $bt[1]["line"];
@@ -95,14 +107,18 @@ class DTLog{
 		$msg = is_array($msg)?json_encode($msg):(string)$msg;
 		flock($fp,LOCK_EX | LOCK_NB);
 		$meta = stream_get_meta_data($fp);
-		if($meta["wrapper_type"]!="PHP" || static::isCLI()){ //wrap with log text
+		if (static::$colorize=="pml"){ //get rid of colorize... for now
+			$msg = preg_replace("/<dt-color color=[^>]*>/","",$msg);
+			$msg = preg_replace("/<\/dt-color>/","",$msg);
+			$msg = "[{$timestamp}] {$file}:{$line}:{$code}:{$msg}\n";
+		}else if($meta["wrapper_type"]!="PHP" || static::isCLI()){ //wrap with log text
 			$msg = preg_replace("/<dt-color color=green>/",chr(27)."[42m",$msg);
 			$msg = preg_replace("/<dt-color color=red>/",chr(27)."[41m",$msg);
 			$msg = preg_replace("/<dt-color color=yellow>/",chr(27)."[43m",$msg);
 			$msg = preg_replace("/<dt-color color=blue>/",chr(27)."[44m",$msg);
 			$msg = preg_replace("/<\/dt-color>/",chr(27)."[0m",$msg);
-			$msg = "[{$timestamp}] {$file}:{$line}:{$msg}\n";
-		}else{
+			$msg = "[{$timestamp}] {$file}:{$line}:{$code}:{$msg}\n";
+		}else {
 			$msg = preg_replace("/<dt-color color=green>/","<span style='background-color: green'>",$msg);
 			$msg = preg_replace("/<dt-color color=red>/","<span style='background-color: red'>",$msg);
 			$msg = preg_replace("/<dt-color color=yellow>/","<span style='background-color: yellow'>",$msg);
@@ -125,6 +141,7 @@ class DTLog{
 	 */
 	protected static function openOrCreate($log_type){
 		$config = DTSettingsConfig::sharedSettings();
+		static::$colorize = isset($config["logs"]["colorize"])?$config["logs"]["colorize"]:"pml";
 		$file = isset($config,$config["logs"],$config["logs"][$log_type])
 			?$config["logs"][$log_type]:"php://output";
 		if(!substr_compare("php://", $file, 0)&&!file_exists($file)){

@@ -237,27 +237,27 @@ END;
 	
 	/// test whether we capture the attributes of our parent
 	public function testParent(){
-		$aa_filter = $this->db->filter(array("ModelAA.id"=>3));
+		$aa_filter = ModelAA::isAQB($this->db->filter(array("ModelAA.id"=>3)));
 		$test = new ModelAA($aa_filter);
 		$this->assertEquals("A1",$test["name"]);
 	}
 
 	/// test whether we capture the attributes of our grandparent
 	public function testGrandparent(){
-		$aaa_filter = $this->db->filter(array("ModelAAA.id"=>4));
+		$aaa_filter = ModelAAA::isAQB($this->db->filter(array("ModelAAA.id"=>4)));
 		$test = new ModelAAA($aaa_filter);
 		$this->assertEquals("A1",$test["name"]);
 	}
 	
 	public function testManyToManyViaParent(){
-		$aa_filter = $this->db->filter(array("ModelAA.id"=>3));
+		$aa_filter = ModelAA::isAQB($this->db->filter(array("ModelAA.id"=>3)));
 		$test = new ModelAA($aa_filter);
 		$this->assertEquals("B1",$test["b_list"][0]["name"]);
 		$this->assertEquals("B2",$test["b_list"][1]["name"]);
 	}
 	
 	public function testManyToManyViaGrandparent(){
-		$aaa_filter = $this->db->filter(array("ModelAAA.id"=>4));
+		$aaa_filter = ModelAAA::isAQB($this->db->filter(array("ModelAAA.id"=>4)));
 		$test = new ModelAAA($aaa_filter);
 		
 		// this comes from the grandparent class
