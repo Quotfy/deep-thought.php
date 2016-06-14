@@ -12,8 +12,10 @@ before_install:
 install:
   - sudo apt-get update
   - sudo apt-get install sqlite3 curl php5-curl php5-mysql php5-pgsql php5-sqlite php5-mcrypt php5-json
-  - sudo pecl install oauth
   - composer install
+  
+before_script:
+  - printf "\n" | pecl install oauth
   
 script:
   - vendor/bin/phpunit tests
