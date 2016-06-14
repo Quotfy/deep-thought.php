@@ -1,3 +1,5 @@
+![build status](https://travis-ci.org/expressive-analytics/deep-thought.php.svg?branch=master)
+
 deep-thought.php
 ================
 
