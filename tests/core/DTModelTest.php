@@ -1,4 +1,4 @@
-<?php 
+<?php
 class DTModelTest extends DTTestCase{
 	public function initSQL($sql=""){
 		return $sql .= <<<END
@@ -37,7 +37,7 @@ INSERT INTO table_a_to_b (id,name,a_id,b_id) VALUES (2,'AB2',1,2);
 CREATE TABLE table_c (
 	id integer PRIMARY KEY autoincrement,
 	name text,
-	b_id int	
+	b_id int
 );
 INSERT INTO table_c (id,name,b_id) VALUES (1,'C1',1);
 INSERT INTO table_c (id,name,b_id) VALUES (2,'C2',1);
@@ -56,46 +56,47 @@ CREATE TABLE table_aa (
 	id integer primary key autoincrement,
 	a_parent_id integer
 );
-INSERT INTO table_aa (id, a_parent_id) VALUES (3, 1);
+INSERT INTO table_aa (id, a_parent_id) VALUES (113, 1);
 
 CREATE TABLE table_aaa (
 	id integer primary key autoincrement,
 	aa_parent_id integer
 );
-INSERT INTO table_aaa (id, aa_parent_id) VALUES (4, 3);
+INSERT INTO table_aaa (id, aa_parent_id) VALUES (4, 113);
 
 CREATE TABLE table_e (
 	id integer PRIMARY KEY autoincrement,
 	name text,
 	aa_id int
 );
-INSERT INTO table_e (id,name,aa_id) VALUES (1,'E1',3);
-INSERT INTO table_e (id,name,aa_id) VALUES (2,'E2',3);
+INSERT INTO table_e (id,name,aa_id) VALUES (501,'E1',113);
+INSERT INTO table_e (id,name,aa_id) VALUES (502,'E2',113);
+INSERT INTO table_e (id,name,aa_id) VALUES (503,'E3',9913);
 
 END;
 	}
-	
+
 	public function testConstructor(){
 		$test_str = '{"fruit": "apple", "color": "red"}';
 		$obj = new DTModel(json_decode($test_str,true));
 		$this->assertEquals("apple",$obj["fruit"],json_encode($obj));
 		$this->assertEquals("red",$obj["color"]);
 	}
-	
+
 	public function testIsDirty(){
 		$obj = new TestModel($this->db->filter(array("id"=>1)));
 		$this->assertFalse($obj->isDirty("new_key"));
 		$obj["new_key"] = "dirty";
 		$this->assertTrue($obj->isDirty("new_key"));
 	}
-	
+
 	public function testSetToNull(){
 		$obj = new TestModel($this->db->filter(array("id"=>1)));
 		$obj["name"] = null;
 		$properties = $obj->storageProperties($this->db);
 		$this->assertTrue(in_array("name", array_keys($properties))&&$obj["name"]===null);
 	}
-	
+
 	public function testUpsertFromStorage(){
 		// 1. test recovery of parameters
 		$test = TestModel::upsert($this->db->filter(array("id"=>1)),array());
@@ -103,68 +104,68 @@ END;
 		$test = TestModel::upsert($this->db->filter(array("id"=>2)),array());
 		$this->assertEquals("SUCCESS",$test["status"]);
 	}
-	
+
 	public function testUpsertSetter(){
 		// 1. test newly upserted setter
 		$test = TestModel::upsert(
 			$this->db->filter(array(1=>0)),
 			array("status"=>"FAILURE")); //overridden by setter method
 		$this->assertEquals("SUCCESS",$test["status"]);
-		
+
 		// 2. test existing upsert setter
 		$test = TestModel::upsert(
 			$this->db->filter(array("id"=>1)),
 			array("status"=>"FAILURE")); //overridden by setter method
 		$this->assertEquals("SUCCESS",$test["status"]);
 	}
-	
+
 	public function testGetOne(){
 		// 1. test B.a_id->A
 		$test = new ModelB($this->db->filter(array("id"=>1)));
 		$this->assertEquals("A1",$test["a"]["name"]);
-		
+
 		// 2. test AB.a_id->A
 		$test = new ModelAB($this->db->filter(array("id"=>1)));
 		$this->assertEquals("A1",$test["a"]["name"]);
 	}
-	
+
 	public function testGetMany(){
 		// 1. test A->B.a_id (one-to-many)
 		$test = new ModelA($this->db->filter(array("id"=>1)));
 		$this->assertEquals("B1",$test["b_list"][0]["name"]);
 		$this->assertEquals("B2",$test["b_list"][1]["name"]);
-		
+
 		// 2. test A->AB->B (many-to-many)
 		$test = new ModelA($this->db->filter(array("id"=>1)));
 		$this->assertEquals("B1",$test["b_list_weak"][0]["name"]);
 		$this->assertEquals("B2",$test["b_list_weak"][1]["name"]);
-		
+
 		// 3. test A->AB->B->C (many-to-many+)
 		$test = new ModelA($this->db->filter(array("id"=>1)));
 		$this->assertEquals(3,count($test["c_list"]));
 		$this->assertEquals("C1",$test["c_list"][0]["name"]);
 		$this->assertEquals("C2",$test["c_list"][1]["name"]);
 		$this->assertEquals("C3",$test["c_list"][2]["name"]);
-		
+
 		// 4. test shortcut A->AB->C (many-to-many*)
 		$test = new ModelA($this->db->filter(array("id"=>1)));
 		$this->assertEquals("C1",$test["c_list_optimized"][0]["name"]);
 		$this->assertEquals("C2",$test["c_list_optimized"][1]["name"]);
 		$this->assertEquals("C3",$test["c_list_optimized"][2]["name"]);
-		
+
 		// 5. test A->D.a2_id
 		$test = new ModelA($this->db->filter(array("id"=>1)));
 		$this->assertEquals(1,count($test["d_list"]));
 		$this->assertEquals("D1",$test["d_list"][0]["name"]);
 	}
-	
+
 	public function testSetOne(){
 		$a = ModelA::upsert($this->db->qb()->fail(),array("name"=>"testA"));
 		$test = new ModelB($this->db->filter(array("id"=>1)));
 		$test->setA("a",array("name"=>"testA"));
 		$this->assertEquals("testA",$test["a"]["name"]);
 	}
-	
+
 	public function testUpsertManyByID(){
 		$a_filter = $this->db->filter(array("id"=>1));
 		$test = new ModelA($this->db->filter(array("id"=>1)));
@@ -173,7 +174,7 @@ END;
 		$this->assertEquals("B1",$test["b_list"][0]["name"]);
 		$this->assertNotEquals("B2",$test["b_list"][1]["name"]);
 	}
-	
+
 	public function testUpsertManyByIDBListWeak(){
 		$a_filter = $this->db->filter(array("id"=>1));
 		$test = new ModelA($this->db->filter(array("id"=>1)));
@@ -182,7 +183,7 @@ END;
 		$this->assertEquals("B1",$test["b_list_weak"][0]["name"]);
 		$this->assertNotEquals("B2",$test["b_list_weak"][1]["name"]);
 	}
-	
+
 	public function testUpsertManyByIDCList(){
 		$a_filter = $this->db->filter(array("id"=>1));
 		$test = new ModelA($a_filter);
@@ -192,7 +193,7 @@ END;
 		$this->assertEquals("C2",$test["c_list"][1]["name"]);
 		$this->assertEquals("4",$test["c_list"][2]["id"]);
 	}
-	
+
 	public function testUpsertManyByIDOptimized(){
 		$a_filter = $this->db->filter(array("id"=>1));
 		$test = new ModelA($a_filter);
@@ -202,7 +203,7 @@ END;
 		$this->assertEquals("C2",$test["c_list_optimized"][1]["name"]);
 		$this->assertEquals("4",$test["c_list_optimized"][2]["id"]);
 	}
-	
+
 	public function testUpsertManyByIDDList(){
 		$a_filter = $this->db->filter(array("id"=>1));
 		$test = new ModelA($a_filter);
@@ -211,7 +212,7 @@ END;
 		$this->assertEquals("D1",$test["d_list"][0]["name"]);
 		$this->assertNotEquals("D2",$test["d_list"][1]["name"]);
 	}
-	
+
 	public function testUpsertManyByIDWithParams(){
 		$a_filter = $this->db->filter(array("id"=>1));
 		ModelA::upsert($a_filter,array("c_list"=>array(
@@ -224,7 +225,7 @@ END;
 		$this->assertEquals("C2",$test["c_list"][1]["name"]);
 		$this->assertNotEquals("C3",$test["c_list"][2]["name"]);
 	}
-	
+
 	public function testUpsertManyByParams(){
 		$a_filter = $this->db->filter(array("id"=>1));
 		$test = new ModelA($a_filter);
@@ -233,59 +234,78 @@ END;
 		$this->assertEquals("C2",$test["c_list"][1]["name"]);
 		$this->assertNotEquals("C3",$test["c_list"][2]["name"]);
 	}
-	
-	
+
+
 	/// test whether we capture the attributes of our parent
 	public function testParent(){
-		$aa_filter = ModelAA::isAQB($this->db->filter(array("ModelAA.id"=>3)));
+		//$aa_filter = ModelAA::isAQB($this->db->filter(array("ModelAA.id"=>113)));
+		$aa_filter = $this->db->filter(array("ModelAA.id"=>113));
 		$test = new ModelAA($aa_filter);
 		$this->assertEquals("A1",$test["name"]);
 	}
 
 	/// test whether we capture the attributes of our grandparent
 	public function testGrandparent(){
-		$aaa_filter = ModelAAA::isAQB($this->db->filter(array("ModelAAA.id"=>4)));
+		//$aaa_filter = ModelAAA::isAQB($this->db->filter(array("ModelAAA.id"=>4)));
+		$aaa_filter = $this->db->filter(array("ModelAAA.id"=>4));
 		$test = new ModelAAA($aaa_filter);
 		$this->assertEquals("A1",$test["name"]);
 	}
-	
+
 	public function testManyToManyViaParent(){
-		$aa_filter = ModelAA::isAQB($this->db->filter(array("ModelAA.id"=>3)));
+		//$aa_filter = ModelAA::isAQB($this->db->filter(array("ModelAA.id"=>113)));
+		//DTLog::debug($aa_filter->from("table_aa ModelAA"));
+		$aa_filter = $this->db->filter(array("ModelAA.id"=>113));
 		$test = new ModelAA($aa_filter);
+		//DTLog::debug($aa_filter);
 		$this->assertEquals("B1",$test["b_list"][0]["name"]);
 		$this->assertEquals("B2",$test["b_list"][1]["name"]);
 	}
-	
+
 	public function testManyToManyViaGrandparent(){
-		$aaa_filter = ModelAAA::isAQB($this->db->filter(array("ModelAAA.id"=>4)));
+		//$aaa_filter = ModelAAA::isAQB($this->db->filter(array("ModelAAA.id"=>4)));
+		$aaa_filter = $this->db->filter(array("ModelAAA.id"=>4));
 		$test = new ModelAAA($aaa_filter);
-		
+
 		// this comes from the grandparent class
 		$this->assertEquals("B1",$test["b_list"][0]["name"]);
 		$this->assertEquals("B2",$test["b_list"][1]["name"]);
-		
+
 		// only the parent knows how to do this one
 		$this->assertEquals("E1",$test["e_list"][0]["name"]);
 		$this->assertEquals("E2",$test["e_list"][1]["name"]);
 	}
-	
+
 	public function testClosure(){
 		$a = new ModelA($this->db->filter(array("id"=>1)));
-		
+
 		$default = array();
 		$closure = $a->closure(array("ModelAB","ModelB"),$default);
 		$this->assertEquals('{"ModelA":{"1":1},"ModelAB":{"1":1,"2":1},"ModelB":{"2":2,"1":1}}',json_encode($closure));
-		
+
 		$a["b_list_weak"] = array(1);
 		$b = new ModelB($this->db->filter(array("name"=>"B2")));
 		$this->assertEquals("2",$b["id"]); // make sure we haven't wiped out the B list
+	}
+
+	public function testAncestors(){
+		$ancestors = ModelAA::ancestors();
+		$this->assertEquals(array("ModelAA","ModelA"),$ancestors);
+		$ancestors = ModelAAA::ancestors();
+		$this->assertEquals(array("ModelAAA","ModelAA","ModelA"),$ancestors);
+	}
+
+	/** make sure that we can get columns for sibling models */
+	public function testSiblingManifests(){
+		$aa = new ModelAA($this->db->filter(array("ModelAA.id"=>113)));
+		$this->assertEquals(2,count($aa["e_list"]));
 	}
 }
 
 class TestModel extends DTModel{
 	protected static $storage_table = "test_models";
 	public $status;
-	
+
 	public function setStatus($val){
 		$this->status = "SUCCESS";
 	}
@@ -302,15 +322,21 @@ class ModelA extends DTModel{
 	);
 	public $name;
 	public $c_list;
-	
+
+	public function BList(){
+		$qb = $this->getManyQB("b_list",$this->db->qb());
+		return $this->getMany("b_list",$this->db->qb());
+	}
+
+
 	public function CList(){
 		return $this->getMany("c_list",$this->db->qb()->orderBy("ModelC.id"));
 	}
-	
+
 	public function CListOptimized(){
 		return $this->getMany("c_list_optimized",$this->db->qb()->orderBy("ModelC.id"));
 	}
-	
+
 	public function setCListTags($vals){
 		return $this->setMany("c_list",$vals,function($out,$i){
 			$out[] = array("name"=>$i); return $out;
@@ -366,7 +392,14 @@ class ModelAA extends ModelA{
 		"a_parent_id"=>"ModelA"
 	);
 	protected static $has_many_manifest = array(
-		"e_list"=>array("ModelE")	
+		"e_list"=>array("ModelE")
+	);
+}
+
+class ModelAASibling extends ModelA{
+	protected static $storage_table = "table_aa";
+	protected static $is_a_manifest = array(
+		"a_parent_id"=>"ModelA"
 	);
 }
 
@@ -380,7 +413,8 @@ class ModelAAA extends ModelAA{
 class ModelE extends DTModel{
 	protected static $storage_table = "table_e";
 	protected static $has_a_manifest = array(
-		"aa"=>array("ModelAA","aa_id")
+		"aa"=>array("ModelAA","aa_id"),
+		"aa_sib"=>array("ModelAASibling","aa_id") // temporary fixer (subclassing messes up siblings)
 	);
 	public $name;
 	public $aa;

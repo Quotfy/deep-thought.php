@@ -11,10 +11,10 @@
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -30,26 +30,26 @@
  * @link       http://www.expressiveanalytics.com/
  * @since      version 1.0.0
  */
- 
+
 class DTModel implements arrayaccess {
 	/** require properties to be defined in the class, defaults to false */
 	protected static $strict_properties = false;
 	protected static $storage_table = null;
 	protected static $primary_key_column = "id";
-	
+
 	protected static $has_a_manifest = array();
 	protected static $has_many_manifest = array();
 	protected static $is_a_manifest = array();
-	
+
 	protected $db=null;
 	protected $input=array();
 	public $id = 0;
 
     protected $_properties = array(); /** @internal */
     protected $_bypass_accessors = false; /** @internal a flag used to bypass accessors during construction */
-    
+
     protected $_unsanitary = true;
-    
+
     /**
     	@param paramsOrQuery - an assoc. array of default properties or DTQueryBuilder object
     */
@@ -76,10 +76,10 @@ class DTModel implements arrayaccess {
 				$this[$k] = $v;//make sure we go through the set method
 		else
 			DTLog::warn("Attempt to instantiate ".get_called_class()." from invalid type (".json_encode($properties).")",1);
-			
+
 		$this->_bypass_accessors = false; //make sure we use the accessors now
 	}
-    
+
     /**
     	looks for an accessor method (called set+offset+), or uses a basic storage mechanism
     	@return returns the value that was stored
@@ -94,7 +94,7 @@ class DTModel implements arrayaccess {
 				if($offset!="many" && $offset!="a" && method_exists($this, $accessor)) //use the accessor method
 					return $this->$accessor($value);
 				//	note: setMany causes immediate database insertion
-				//	this is necessary, because we need these objects hooked up	
+				//	this is necessary, because we need these objects hooked up
 				$manifest = static::hasManyManifest();
 				if(isset($manifest[$offset])) //this is a set-many relationship
 					$value = $this->setMany($manifest[$offset],$value);
@@ -151,17 +151,17 @@ class DTModel implements arrayaccess {
 		}
 		return null;
     }
-    
+
     public function isDirty($offset){
 		if(in_array($offset,array_keys(get_class_vars(get_called_class()))) || in_array($offset,array_keys($this->_properties)))
 			return true;
 		return false;
 	}
-    
+
     /**
 	    @param chain a chain of models to traverse
 	    @param qb optional DTQueryBuilder (use <Model>_<seq#> for filtering)
-	  @return returns an array of DTModels by traversing an entry in the has-many manifest  
+	  @return returns an array of DTModels by traversing an entry in the has-many manifest
 	*/
     public function getMany($chainOrName,DTQueryBuilder $qb=null){
 	    $chain = $chainOrName;
@@ -171,11 +171,11 @@ class DTModel implements arrayaccess {
 		}
 	    if(!isset($qb))
 		    $qb = $this->db->qb();
-		    
+
 	    $qb = $this->getManyQB($chain,$qb,$target_class);
 	    return $target_class::select($qb,"{$target_class}.*");
 	}
-	
+
 	public function getManyQB($chainOrName,DTQueryBuilder $qb=null, &$target_class=null){
 		$chain = $chainOrName;
 	    if(!is_array($chainOrName)){
@@ -184,7 +184,7 @@ class DTModel implements arrayaccess {
 		}
 	    if(!isset($qb))
 		    $qb = $this->db->qb();
-		
+
 		$link = explode(".",$chain[0]);
 	    $key_col = $link[0]::columnForModel(get_called_class());
 	    if(count($link)>1)
@@ -192,7 +192,7 @@ class DTModel implements arrayaccess {
 	    $key_val = $this[static::$primary_key_column];
 	    $link = explode(".",array_pop($chain));
 	    $target_class = $link[0];
-	    
+
 	    $last_col = null;
 	    if(count($chain)>0)
 		    $last_col = $target_class::columnForModel($chain[count($chain)-1]);
@@ -207,32 +207,38 @@ class DTModel implements arrayaccess {
 		    $col = $model::columnForModel($last_model);
 		    if(count($link)>1)
 		    	$col = $link[1];
-		    
+
 			$model_alias = $model."_".count($chain);
 			if(($owner_alias = $model::aliasForOwner($col))==null)
 				$owner_alias = $model_alias;
 			$qb->join("{$model::$storage_table} {$model_alias}","{$last_alias}.{$last_col}={$owner_alias}.{$col}");
 			$model::isAQB($qb,$model_alias);
-			
+
 			$last_alias = $model_alias;
 			$last_model = $model;
 			$last_col = $col;
 		}
-			
-		// just like selectQB(), we need to have this done already for join conditions
-		//$qb = static::isAQB($qb); //account for parent attributes
-		$manifest = $this->isAManifest();
-		if(count($manifest)>0){ // we need to use the parent class id
-			$qb->join(static::$storage_table." ".get_called_class(),get_called_class().".".static::$primary_key_column."=".$this[static::$primary_key_column]);
-			$qb->addColumns(array(get_called_class().".*"));// make sure we pull into the new attributes
-		}else{ //use our own ID
+
+    $manifest = $this->isAManifest();
+    if(count($manifest)>0){ //we need to use the parent class id
+      //get our backreference as a set of models we can hash through
+      $backref = array_map(function($i){return $i[0];},array_values($last_alias::hasAManifest()));
+      $m = get_called_class();
+      foreach($manifest as $col=>$next_m){ // join in parent classes
+        $qb->join($m::$storage_table." ".$m,$m.".".$col."=".$this[$col]);
+        if(in_array($m,$backref)) // step in with our actual filter value
+          $qb->filter(array("{$last_alias}.{$key_col}"=>$key_val));
+        $key_val = $this[$col];
+        $m=$next_m;
+      }
+    }else{ //use our own ID
 			$qb->filter(array("{$last_alias}.{$key_col}"=>$key_val));
 		}
 		return $qb;
 	}
-	
+
 	/**
-		@return returns a set of all ids linked at each level of the given chain	
+		@return returns a set of all ids linked at each level of the given chain
 	*/
 	public function closure(Array $chain, Array &$defaults=array()){
 		$closure = array();
@@ -259,21 +265,21 @@ class DTModel implements arrayaccess {
 		}
 		return $closure;
 	}
-	
+
 	/**
 		@note this method will delete all other records linked to the model (stale entries)
 		@param chain the chain to follow for upserting
 		@param vals the values to be upserted in the target table (converted to array, if necessary)
-		@param builder_f an optional user function to transform the upsert parameters (default behavior is to match to the primary key column)	
+		@param builder_f an optional user function to transform the upsert parameters (default behavior is to match to the primary key column)
 		@return returns the entries from the final link (should match getMany)
 	*/
-	public function setMany($chainOrName,$vals,$builder_f=null){		
+	public function setMany($chainOrName,$vals,$builder_f=null){
 		$chain = $chainOrName;
 	    if(!is_array($chainOrName)){
 		    $manifest = $this->hasManyManifest();
 		    $chain = $manifest[$chainOrName];
 		}
-		
+
 	    //prepare the parameters for filter/upsert in the target table (builder_f)
 	    $link = explode(".",$chain[count($chain)-1]);
 	    $target_class = $link[0];
@@ -285,10 +291,10 @@ class DTModel implements arrayaccess {
 			};
 		}
 		$params = array_reduce($vals,$builder_f,array());
-		
+
 		$defaults = array();
 		$stale_sets = $this->closure($chain,$defaults);
-		
+
 		// do the chain of upserts
 		$delete_stale = count($chain)==1?true:false; //don't delete from the destination table, unless it's the only stop
 		$inserted = array();
@@ -336,15 +342,15 @@ class DTModel implements arrayaccess {
 					if($col!=$model::$primary_key_column) // need to clear our back-link
 						$model::updateRows($this->db->filter(array($model::$primary_key_column=>array("IN",array_keys($stale)))),array($col=>null));
 			}
-				
+
 			$delete_stale = true;
 			$first_link = false;
 			$params = $last_params;
 		}
-			
+
 		return $inserted;
 	}
-    
+
     /**
     	override this method if you want to compare objects by a subset of properties
     	@return returns true if object is equal to +obj+
@@ -352,7 +358,7 @@ class DTModel implements arrayaccess {
     public function isEqual(DTModel $obj){
 	    return $this==$obj;
     }
-    
+
     /** attempts to access +property+ directly (does not work with accessors), assigning value of +f+ if not found */
     protected function selfOr(&$property,callable $f){
 		return $property =
@@ -360,11 +366,11 @@ class DTModel implements arrayaccess {
 		? $property
 		: call_user_func($f);
 	}
-    
+
 //==================
 //! Storage Methods
 //==================
-    
+
     /**
     	override this method to customize the properties that get stored
     	@return returns an array of key-value pairs that can be used for storage
@@ -380,7 +386,7 @@ class DTModel implements arrayaccess {
 		}
 		return array_merge($public_params,$defaults);
 	}
-	
+
 	public function storageProperties(DTStore $db,array $defaults=array(),$purpose=null){
 		$storage_params = array();
 		$cols = $db->columnsForTable(static::$storage_table);
@@ -394,7 +400,7 @@ class DTModel implements arrayaccess {
 		}
 		return array_merge($defaults,$storage_params);
 	}
-	
+
 	/**
 		cleans properties in preparation for storage
 	*/
@@ -406,7 +412,7 @@ class DTModel implements arrayaccess {
 			$this[$k] = $v;
 		$this->_unsanitary = false;
 	}
-	
+
 	/** attempts to set each property as defined in +params+ (but never merges id property)
 		@param the parameters to merge in
 		@param changes - on return, this is a description of the changes to storage
@@ -433,7 +439,7 @@ class DTModel implements arrayaccess {
 		}
 		return $updated;
 	}
-	
+
 	/**
 		convenience method for basic inserts based on storageProperties()
 		@return returns the inserted id, or false if nothing was inserted
@@ -447,7 +453,7 @@ class DTModel implements arrayaccess {
 		$this[static::$primary_key_column] = $new_id;
 		return $new_id;
 	}
-	
+
 	/**
 		convenience method for basic updates based on storageProperties()
 		@note uses the object's id property for where-clause, unless query-builder is passed
@@ -463,7 +469,7 @@ class DTModel implements arrayaccess {
 		$properties = $this->storageProperties($db,array(),"update");
 		return $qb->from(static::$storage_table)->update($properties);
 	}
-	
+
 	/**
 		delete the object in storage
 		@param qb - this determines what is matched for delete, defaults to primary-key column
@@ -473,7 +479,7 @@ class DTModel implements arrayaccess {
 		$qb = isset($qb)?$qb:$db->where(static::$primary_key_column."='".$this[static::$primary_key_column]."'");
 		return $qb->from(static::$storage_table)->delete();
 	}
-	
+
 	/** convenience method for updating or inserting a record (as necessary)
 		@param qb - a querybuilder to identify the record for updating
 		@param params - the parameters to update/insert
@@ -504,7 +510,7 @@ class DTModel implements arrayaccess {
 		}
 		return $obj;
 	}
-	
+
 	protected function upsertAncestors(array $params){
 		$manifest = array_reverse(static::isAManifest());
 		foreach($manifest as $col=>$m){
@@ -516,17 +522,18 @@ class DTModel implements arrayaccess {
 			$this[$col] = $parent[$dst_col];
 		}
 	}
-	
+
 	/** called during instantiation from storage--override to modify QB */
 	public static function selectQB($qb){
 		$qb->from(static::$storage_table." ".get_called_class());
-		//$qb = static::isAQB($qb); //disabled because this needs to happen before other joins
+    //$qb = static::isAQB($qb); //disabled because this needs to happen before other joins
+    $qb = static::isAQB($qb);
 		$manifest = static::isAManifest();
 		if(count($manifest)>0)
 			$qb->addColumns(array(get_called_class().".*")); //make sure we get our own ID, not a subclass
 		return $qb;
 	}
-	
+
 	public static function isAQB(DTQueryBuilder $qb,$alias=null){
 		if(!isset($alias))
 			$alias = get_called_class();
@@ -542,10 +549,11 @@ class DTModel implements arrayaccess {
 			$qb = $dst_model::isAQB($qb,$dst_alias); // also join in the parent's selectQB()
 			$qb->addColumns(array($dst_alias.".*")); // makes parent attributes available
 			$i++;
+      break; //don't step up to the parents
 		}
 		return $qb;
 	}
-	
+
 	/** traverses the is_a hierarchy for the attribute owner */
 	public static function aliasForOwner($col){
 		$ref = new ReflectionClass(get_called_class());
@@ -556,7 +564,7 @@ class DTModel implements arrayaccess {
 		}
 		return null;
 	}
-	
+
 	public static function select(DTQueryBuilder $qb,$cols=null){
 		static::selectQB($qb);
 	    // older versions of postgresql cannot handle a general * here (associated tables can't be grouped in)
@@ -564,28 +572,28 @@ class DTModel implements arrayaccess {
 		$cols = isset($cols)?$cols:get_called_class().".*";
 		return $qb->selectAs(get_called_class(),$cols);
 	}
-	
+
 	public static function selectKV(DTQueryBuilder $qb,$cols){
 		static::selectQB($qb);
 		return $qb->selectKV($cols);
 	}
-	
+
 	public static function count(DTQueryBuilder $qb){
 		return $qb->from(static::$storage_table." ".get_called_class())->count(get_called_class().".*");
 	}
-	
+
 	public static function sum(DTQueryBuilder $qb,$col){
 		return $qb->from(static::$storage_table." ".get_called_class())->sum($col);
 	}
-	
+
 	public static function updateRows(DTQueryBuilder $qb,$params){
 		return $qb->from(static::$storage_table)->update($params);
 	}
-	
+
 	public static function deleteRows(DTQueryBuilder $qb){
 		return $qb->from(static::$storage_table)->delete();
 	}
-	
+
 	public static function byID($db,$id,$cols="*"){
 		if(!($db instanceof DTStore))
 			throw new Exception("invalid storage for id ('{$id}')");
@@ -594,11 +602,11 @@ class DTModel implements arrayaccess {
 			return $rows[0];
 		return null;
 	}
-	
+
 	function setStore($db){
 		$this->db = $db;
 	}
-	
+
 //! Property manipulation methods
 ///@name Property manipulation methods
 ///@{
@@ -609,19 +617,19 @@ class DTModel implements arrayaccess {
 		if($str=="")
 			return null;
 	    $key = pack('H*', $salt);
-	
+
 	    # create a random IV to use with CBC encoding
 	    $iv_size = mcrypt_get_iv_size(MCRYPT_RIJNDAEL_128, MCRYPT_MODE_CBC);
 	    $iv = mcrypt_create_iv($iv_size, MCRYPT_RAND);
-	    
-	    # creates a cipher text compatible with AES (Rijndael block size = 128) to keep the text confidential 
+
+	    # creates a cipher text compatible with AES (Rijndael block size = 128) to keep the text confidential
 	    # only suitable for encoded input that never ends with value 00h (because of default zero padding)
 	    $ciphertext = mcrypt_encrypt(MCRYPT_RIJNDAEL_128, $key,$str, MCRYPT_MODE_CBC, $iv);
 	    $ciphertext = $iv . $ciphertext; # prepend the IV for it to be available for decryption
 	    $ciphertext_base64 = base64_encode($ciphertext); # encode the resulting cipher text so it can be represented by a string
 	    return $ciphertext_base64;
 	}
-	
+
 	/** Reverse two-way encryption method (use encode() to create string)
 		- from the PHP mcrypt docs (http://docs.php.net/manual/en/function.mcrypt-encrypt.php) */
 	public static function decode($str,$salt){
@@ -635,7 +643,7 @@ class DTModel implements arrayaccess {
 	    $plaintext_dec = mcrypt_decrypt(MCRYPT_RIJNDAEL_128, $key, $ciphertext_dec, MCRYPT_MODE_CBC, $iv_dec); //may remove 00h valued characters from end of plain text
 	    return rtrim($plaintext_dec,"\0");
 	}
-	
+
 	// from http://stackoverflow.com/questions/2690504/php-producing-relative-date-time-from-timestamps
 	public static function relativeTime($ts){
 		if($ts=="")
@@ -677,29 +685,29 @@ class DTModel implements arrayaccess {
 	        return date('F Y', $ts);
 	    }
 	}
-	
+
 	public function dateMDY($ts){
 		return isset($ts)?date("m/d/Y",strtotime($ts)):"";
 	}
-	
+
 	public function timeAM($ts){
 		return isset($ts)?date("h:iA",strtotime($ts)):"";
 	}
-		
+
 ///@}
 
 	public function __toString(){
 		return json_encode($this->publicProperties());
 	}
-	
+
 	public function getA($class,$column){
-		
+
 		try{
 			return new $class($this->db->filter(array($class::$primary_key_column=>$this[$column])));
 		}catch(Exception $e){}
 		return null;
 	}
-	
+
 	/** this does an immediate upsert
 		@param name - the name of the manifest entry
 		@param params - the attributes to match/upsert. Defaults to full match on post-accessor storage properties
@@ -714,7 +722,7 @@ class DTModel implements arrayaccess {
 		$this[$col] = $obj[$class::$primary_key_column];
 		return $obj;
 	}
-	
+
 	/**
 		runs a set of parameters through model-building logic, handy for upserts that require transformation
 		@return returns the model-processed properties ready for storage
@@ -726,23 +734,23 @@ class DTModel implements arrayaccess {
 		unset($properties[static::$primary_key_column]);
 		return $properties;
 	}
-	
+
 	protected static function hasManyManifest(){
 		static $manifests = array();
 		if(!isset($manifests[get_called_class()])){
 			$manifests[get_called_class()] = static::$has_many_manifest;
 			if($parent=get_parent_class(get_called_class()))
 				$manifests[get_called_class()] = array_merge($parent::hasManyManifest(),$manifests[get_called_class()]);
-			
+
 		}
 		return $manifests[get_called_class()];
 	}
-	
+
 	protected static function modelFor($name){
 		$manifest = static::hasManyManifest();
 		return $manifest[$name][count($manifest[$name])-1];
 	}
-	
+
 	protected static function hasAManifest(){
 		static $manifests = array();
 		if(!isset($manifests[get_called_class()])){
@@ -752,17 +760,17 @@ class DTModel implements arrayaccess {
 		}
 		return $manifests[get_called_class()];
 	}
-	
+
 	protected static function isAManifest(){
 		static $manifests = array();
 		if(!isset($manifests[get_called_class()])){
 			$manifests[get_called_class()] = static::$is_a_manifest;
-			/*if($parent=get_parent_class(get_called_class()))
-				$manifests[get_called_class()] = array_merge($manifests[get_called_class()],$parent::isAManifest());*/
+			if($parent=get_parent_class(get_called_class()))
+				$manifests[get_called_class()] = array_merge($manifests[get_called_class()],$parent::isAManifest());
 		}
 		return $manifests[get_called_class()];
 	}
-	
+
 	public static function aliasForParent($model){
 		$manifest = static::isAManifest();
 		$i = 0;
@@ -775,23 +783,36 @@ class DTModel implements arrayaccess {
 			return $parent::aliasForParent($model);
 		return null;
 	}
-	
+
+  /** gets the names of all of the ancestors in ascending order (including self) */
+  public static function ancestors(){
+    //return array(get_called_class()); // TEMPORARILY DISABLED
+    static $ancestors = null;
+    if(!isset($ancestors)){
+      $ancestors = array(get_called_class());
+      if(($parent = get_parent_class(get_called_class())) != "DTModel")
+        $ancestors = array_merge($ancestors,$parent::ancestors());
+    }
+    return $ancestors;
+  }
+
 	protected static function columnForModel($model){
 		$manifest = static::hasAManifest();
 		do{ //crawl up the ancencestors
 			foreach($manifest as $m){
 				$parts = explode(".",$m[0]);
-				if($parts[0]==$model)
+				if(in_array($model,$parts[0]::ancestors())){
 					return $m[1];
+        }
 			}
 		}while(($model=get_parent_class($model))!=false);
 		return static::$primary_key_column; //we've got the relationship backward
 	}
-	
+
 	public function primaryKey(){
 		return $this[static::$primary_key_column];
 	}
-	
+
 	public static function primaryKeyColumn(){
 		return static::$primary_key_column;
 	}
