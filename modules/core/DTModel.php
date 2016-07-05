@@ -100,7 +100,7 @@ class DTModel implements arrayaccess {
 					$value = $this->setMany($manifest[$offset],$value);
 				$manifest = static::hasAManifest();
 				if(isset($manifest[$offset])) //this is a has-a relationship
-					$value = $this->setA($offset);
+					$value = $this->setA($offset,$value);
 			}
 			if(property_exists($this, $offset)) //use the property
 				return $this->$offset = $value;
