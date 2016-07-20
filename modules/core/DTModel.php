@@ -225,14 +225,16 @@ class DTModel implements arrayaccess {
       $backref = array_map(function($i){return $i[0];},array_values($last_alias::hasAManifest()));
       $m = get_called_class();
       foreach($manifest as $col=>$next_m){ // join in parent classes
-        $qb->join($m::$storage_table." ".$m,$m.".".$col."=".$this[$col]);
+				$owner_m = $m::aliasForOwner($col);
+        $qb->join($m::$storage_table." ".$m,$owner_m.".".$col."=".$this[$col]);
         if(in_array($m,$backref)) // step in with our actual filter value
           $qb->filter(array("{$last_alias}.{$key_col}"=>$key_val));
         $key_val = $this[$col];
         $m=$next_m;
       }
     }else{ //use our own ID
-			$qb->filter(array("{$last_alias}.{$key_col}"=>$key_val));
+			$owner_alias = $last_alias::aliasForOwner($key_col);
+			$qb->filter(array("{$owner_alias}.{$key_col}"=>$key_val));
 		}
 		return $qb;
 	}
