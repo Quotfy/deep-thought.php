@@ -233,8 +233,7 @@ class DTModel implements arrayaccess {
         $m=$next_m;
       }
     }else{ //use our own ID
-			$owner_alias = $last_alias::aliasForOwner($key_col);
-			$qb->filter(array("{$owner_alias}.{$key_col}"=>$key_val));
+			$qb->filter(array("{$last_alias}.{$key_col}"=>$key_val));
 		}
 		return $qb;
 	}
@@ -554,6 +553,7 @@ class DTModel implements arrayaccess {
 	public static function aliasForOwner($col){
 		$ref = new ReflectionClass(get_called_class());
 		$publics = $ref->getProperties();
+		//$publics = $db->columnsForTable(static::$storage_table); //we could get these from the table, but it would depend on the $db
 		foreach($publics as $p){
 			if($p->name==$col)
 				return static::aliasForParent($p->class);
@@ -768,6 +768,8 @@ class DTModel implements arrayaccess {
 	}
 
 	public static function aliasForParent($model){
+		if($model==get_called_class())
+			return $model."_0";
 		$manifest = static::isAManifest();
 		$i = 0;
 		foreach($manifest as $k=>$class){
