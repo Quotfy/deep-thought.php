@@ -43,13 +43,12 @@ class DTTestCase extends \PHPUnit_Framework_TestCase{
 	function compareSchema($fp,$store=null){
 		if(file_exists($fp)){
 			DTSettingsStorage::initShared($fp);
-			$this->productionStore = DTSettingsStorage::defaultStore($store);
+			$this->production_store = DTSettingsStorage::defaultStore($store);
 		}
 	}
 
 	public function setup(){
 		// swap out the production schema for our test schema
-		$this->production_store = DTSettingsStorage::defaultStore();
 		$this->db = DTSettingsStorage::defaultStore( DTSQLiteDatabase::init($this->initSQL()) );
 	}
 
