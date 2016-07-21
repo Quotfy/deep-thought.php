@@ -11,10 +11,10 @@
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -34,10 +34,17 @@
 class DTTestCase extends \PHPUnit_Framework_TestCase{
 	protected $db=null; /** the test store, initialized before each test by +initSQL()+ */
 	protected $production_store; /** reference to the first production store */
-	
+
 	function __construct(){
 		@session_start(); // don't complain about tests trying to start the session after phpunit's output
 		parent::__construct();
+	}
+
+	function compareSchema($fp,$store=null){
+		if(file_exists($fp)){
+			DTSettingsStorage::initShared($fp);
+			$this->productionStore = DTSettingsStorage::defaultStore($store);
+		}
 	}
 
 	public function setup(){
@@ -50,10 +57,11 @@ class DTTestCase extends \PHPUnit_Framework_TestCase{
 	protected function initSQL($sql=""){
 		return $sql;
 	}
-	
+
 	/** test defined for all cases to verify that production (minimally) matches test schema */
 	public function testProductionSchema(){
 		if(isset($this->production_store)){
+			DTLog::info("comparing production schema...");
 			$test_tables = $this->db->allTables();
 			$prod_tables = $this->production_store->allTables();
 			foreach($test_tables as $t){
