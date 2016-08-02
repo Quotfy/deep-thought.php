@@ -140,7 +140,7 @@ class DTLog{
 	 * @return resource the created/opened file
 	 */
 	protected static function openOrCreate($log_type){
-		$config = DTSettingsConfig::sharedSettings();
+		$config = DTSettings::shared();
 		static::$colorize = isset($config["logs"]["colorize"])?$config["logs"]["colorize"]:"pml";
 		$file = isset($config,$config["logs"],$config["logs"][$log_type])
 			?$config["logs"][$log_type]:"php://output";
