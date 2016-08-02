@@ -61,9 +61,11 @@ class DTSettings{
 	 * @retval DTSettings a reference to the shared settings
 	 */
 	public static function &shared(array $settings=null){
+		if(!isset(static::$shared_settings[static::$namespace]))
+			static::$shared_settings[static::$namespace] = array();
 		if(isset($settings))
 			static::$shared_settings[static::$namespace] =
-				array_merge(static::$shared_settings,$settings);
+				array_merge(static::$shared_settings[static::$namespace],$settings);
 		return static::$shared_settings[static::$namespace];
 	}
 }
