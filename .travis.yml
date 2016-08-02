@@ -9,13 +9,13 @@ php:
 
 before_install:
   - composer self-update
-  
+
 install:
   - sudo apt-get update
-  - sudo apt-get install sqlite3 curl php5-curl php5-mysql php5-pgsql php5-sqlite php5-mcrypt php5-json
-  
+  - sudo apt-get install sqlite3 curl php5-curl php5-mysql php5-pgsql php5-sqlite php5-json
+
 before_script:
   - composer install
-  
+
 script:
   - vendor/bin/phpunit tests

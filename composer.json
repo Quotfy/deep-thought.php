@@ -2,7 +2,7 @@
     "name": "expressive-analytics/deep-thought",
     "type": "library",
     "description": "A highly versatile framework for attaching advanced object functionality to both legacy and modern platforms.",
-    "keywords": ["ducktape","framework"],
+    "keywords": ["deep-thought","ORM","DTModel"],
     "homepage": "https://github.com/expressive-analytics/deep-thought.php",
     "license": "MIT",
     "authors": [
@@ -20,13 +20,6 @@
 	    "phpunit/PHPUnit":">=4.0.0"
     },
     "autoload": {
-	    "classmap":
-    		["modules/utils",
-    		"modules/store",
-    		"modules/store-sqlite",
-    		"modules/store-mysql",
-    		"modules/store-pgsql",
-    		"modules/tests",
-    		"modules/core"]
+	    "classmap":	["src"]
     }
 }

@@ -1,0 +1,1 @@
+apigen generate --source=src -d docs/apigen --no-source-code --title="Deep Thought 2"

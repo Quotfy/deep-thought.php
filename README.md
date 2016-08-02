@@ -3,7 +3,7 @@
 deep-thought.php
 ================
 
-A highly versatile framework for attaching advanced object functionality to both legacy and modern platforms.
+A highly versatile framework for attaching advanced object functionality and ORM to both legacy and modern platforms.
 
 ## Getting Started
 
