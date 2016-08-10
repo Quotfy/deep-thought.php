@@ -712,8 +712,9 @@ class DTModel implements arrayaccess {
 		$manifest = static::hasAManifest();
 		$class = $manifest[$name][0];
 		$col = $manifest[$name][1];
-		if(!isset($params)) //default to exact match on preprocessed params
+		if(empty($params)) //default to exact match on preprocessed params
 			$params = $class::processForStorage($this->input,$this->db);
+		DTLog::debug($params);
 		$obj = $class::upsert($this->db->filter($params),$params);
 		$this[$col] = $obj[$class::$primary_key_column];
 		return $obj;
