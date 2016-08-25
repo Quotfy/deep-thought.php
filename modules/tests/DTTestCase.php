@@ -43,7 +43,9 @@ class DTTestCase extends \PHPUnit_Framework_TestCase{
 	function compareSchema($fp,$store=null){
 		if(file_exists($fp)){
 			DTSettingsStorage::initShared($fp);
-			$this->production_store = DTSettingsStorage::defaultStore($store);
+			if(!empty($store)) // set default store
+				DTSettingsStorage::defaultStore(DTSettingsStorage::connect($store));
+			$this->production_store = DTSettingsStorage::defaultStore();
 		}
 	}
 
