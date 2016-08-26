@@ -60,9 +60,11 @@ class DTQueryBuilder{
 
 	/** if +filter+ is set, it is appended to +where_clause+ using AND */
 	public function buildWhereClause(){
+		$col_esc = $this->db->col_esc;
 		$wc = (!empty($this->enforce)?"({$this->enforce}) AND ":"")."({$this->where_clause})"; //ALWAYS wrap the where clause, or it conflicts with enforce (e.g. [enforcer] and "name like 'a' OR name like 'b'")
 		if(isset($this->filter) && count($this->filter)>0){
-			return $wc ." AND ". implode(" AND ",array_map(function($k,$v){
+			return $wc ." AND ". implode(" AND ",array_map(function($k,$v) use ($col_esc){
+				$k = "{$col_esc}{$k}{$col_esc}";
 				if($v===null) //handle null-matching
 					return "{$k} IS NULL";
 				if(is_array($v)){ //in the case of an array, the elements are [op,exp,txfunc]
