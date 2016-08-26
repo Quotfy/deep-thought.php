@@ -177,8 +177,9 @@ class DTQueryBuilder{
 
 	public function selectStatement($cols="*"){
 		$column_clause = $cols;
+		$col_esc = $this->db->col_esc;
 		if(count($this->columns)>0)
-			$column_clause .= ", ".implode(",",$this->columns);
+			$column_clause .= ", ".implode(",",array_map(function($c) use ($col_esc){return "{$col_esc}{$c}{$col_esc}"},$this->columns));
 			//$column_clause .= ", ".implode(",",array_map(function($k,$v){return "{$v} as {$k}";},array_keys($this->columns),$this->columns));
 		return "SELECT {$column_clause} FROM {$this->from_clause} {$this->join_clause} WHERE ".$this->buildWhereClause()." {$this->group_by} {$this->having_clause} {$this->order_by} {$this->limit_clause}";
 	}
