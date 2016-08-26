@@ -64,8 +64,10 @@ class DTQueryBuilder{
 		$wc = (!empty($this->enforce)?"({$this->enforce}) AND ":"")."({$this->where_clause})"; //ALWAYS wrap the where clause, or it conflicts with enforce (e.g. [enforcer] and "name like 'a' OR name like 'b'")
 		if(isset($this->filter) && count($this->filter)>0){
 			return $wc ." AND ". implode(" AND ",array_map(function($k,$v) use ($col_esc){
+				if(!is_int($k))
+					$k = "{$col_esc}{$k}{$col_esc}";
 				if($v===null) //handle null-matching
-					return "{$col_esc}{$k}{$col_esc} IS NULL";
+					return "{$k} IS NULL";
 				if(is_array($v)){ //in the case of an array, the elements are [op,exp,txfunc]
 					if(is_array($v[1]))
 						$val = "(".implode(",",array_map(function($v){return DTQueryBuilder::formatValue($v);},$v[1])).")";
@@ -75,9 +77,9 @@ class DTQueryBuilder{
 						$val = DTQueryBuilder::formatValue($v[1]);
 					if(isset($v[2])) //check for transform function
 						$val = $v[2]."(".$val.")";
-					return "{$col_esc}{$k}{$col_esc} {$v[0]} {$val}";
+					return "{$k} {$v[0]} {$val}";
 				}
-				return "{$col_esc}{$k}{$col_esc}=".DTQueryBuilder::formatValue($v);
+				return "{$k}=".DTQueryBuilder::formatValue($v);
 			},array_keys($this->filter),$this->filter));
 		}
 		return $wc;
@@ -230,7 +232,8 @@ class DTQueryBuilder{
 
 	public function insert($properties){
 		if(count($properties)>0){
-			$cols_str = implode(",",array_keys($properties));
+			$col_esc = $this->db->col_esc;
+			$cols_str = implode(",",array_map(function($c) use ($col_esc){return "{$col_esc}{$c}{$col_esc}";},array_keys($properties)));
 			$vals_str = implode(",",array_map(function($v){return DTQueryBuilder::formatValue($v);},array_values($properties)));
 			$stmt = "INSERT INTO {$this->from_clause} ({$cols_str}) VALUES ({$vals_str});";
 			return $this->db->insert($stmt);
