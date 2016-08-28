@@ -293,6 +293,10 @@ class DTModel implements arrayaccess {
 		}
 		$params = array_reduce($vals,$builder_f,array());
 
+		// only allow storage values
+		// $storage_cols = array_flip($this->db->columnsForTable(static::$storage_table));
+		// array_intersect_key($params,$storage_cols);
+
 		$defaults = array();
 		$stale_sets = $this->closure($chain,$defaults);
 
@@ -709,12 +713,13 @@ class DTModel implements arrayaccess {
 		@param params - the attributes to match/upsert. Defaults to full match on post-accessor storage properties
 		@return returns the primary key of the new object */
 	public function setA($name,$params=null){
+		if($params == "NULL") // we have a cleaned NULL value here
+			return null;
 		$manifest = static::hasAManifest();
 		$class = $manifest[$name][0];
 		$col = $manifest[$name][1];
 		if(empty($params)) //default to exact match on preprocessed params
 			$params = $class::processForStorage($this->input,$this->db);
-		DTLog::debug($params);
 		$obj = $class::upsert($this->db->filter($params),$params);
 		$this[$col] = $obj[$class::$primary_key_column];
 		return $obj;
