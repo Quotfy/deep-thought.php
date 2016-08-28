@@ -293,10 +293,6 @@ class DTModel implements arrayaccess {
 		}
 		$params = array_reduce($vals,$builder_f,array());
 
-		// only allow storage values
-		// $storage_cols = array_flip($this->db->columnsForTable(static::$storage_table));
-		// array_intersect_key($params,$storage_cols);
-
 		$defaults = array();
 		$stale_sets = $this->closure($chain,$defaults);
 
@@ -327,7 +323,7 @@ class DTModel implements arrayaccess {
 					else //default (for new entries) is to link to the first entry from the previous table
 						$p[$col] = $default_v;
 				}
-				$obj = $model::upsert($this->db->filter($p),$p);
+				$obj = $model::upsert($this->db->filter($model::searchFilter($p,$this->db)),$p);
 				if($first_link) //we're doing the last table
 					$inserted[] = $obj;
 				unset($stale[$obj[$model::$primary_key_column]]);
@@ -720,7 +716,7 @@ class DTModel implements arrayaccess {
 		$col = $manifest[$name][1];
 		if(empty($params)) //default to exact match on preprocessed params
 			$params = $class::processForStorage($this->input,$this->db);
-		$obj = $class::upsert($this->db->filter($params),$params);
+		$obj = $class::upsert($this->db->filter($class::searchFilter($params,$this->db)),$params);
 		$this[$col] = $obj[$class::$primary_key_column];
 		return $obj;
 	}
@@ -819,5 +815,13 @@ class DTModel implements arrayaccess {
 
 	public static function primaryKeyColumn(){
 		return static::$primary_key_column;
+	}
+
+	/**
+	*	@return Array a SELECT-safe set of parameters, by removing all non-storage params
+	*/
+	public static function searchFilter($params,$db){
+		$storage_cols = array_flip($db->columnsForTable(static::$storage_table));
+		return array_intersect_key($params,$storage_cols);
 	}
 }
