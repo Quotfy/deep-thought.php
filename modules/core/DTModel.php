@@ -209,7 +209,7 @@ class DTModel implements arrayaccess {
 		    	$col = $link[1];
 
 			$model_alias = $model."_".count($chain);
-			if(($owner_alias = $model::aliasForOwner($col))==null)
+			if(($owner_alias = $model::aliasForParent($col))==null)
 				$owner_alias = $model_alias;
 			$qb->join("{$model::$storage_table} {$model_alias}","{$last_alias}.{$last_col}={$owner_alias}.{$col}");
 			$model::isAQB($qb,$model_alias);
@@ -551,6 +551,8 @@ class DTModel implements arrayaccess {
 
 	/** traverses the is_a hierarchy for the attribute owner */
 	public static function aliasForOwner($col){
+		if($col==static::$primary_key_column) // drop out here, if we're talking about the primary key
+			return get_called_class();
 		$ref = new ReflectionClass(get_called_class());
 		$publics = $ref->getProperties();
 		//$publics = $db->columnsForTable(static::$storage_table); //we could get these from the table, but it would depend on the $db
@@ -558,7 +560,7 @@ class DTModel implements arrayaccess {
 			if($p->name==$col)
 				return static::aliasForParent($p->class);
 		}
-		return null;
+		return get_called_class();
 	}
 
 	public static function select(DTQueryBuilder $qb,$cols=null){
