@@ -64,7 +64,7 @@ class DTSettingsConfig extends DTSettings{
 			return "/{$suffix}";
 		return sprintf(
 		    "%s://%s%s",
-		    isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] != 'off' ? 'https' : 'http',
+		    (isset(static::$shared_config["force_https"]) && static::$shared_config["force_https"]) || (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] != 'off') ? 'https' : 'http',
 		    $base,
 		    $suffix
 	  );
