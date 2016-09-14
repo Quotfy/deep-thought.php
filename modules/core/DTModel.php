@@ -612,6 +612,8 @@ class DTModel implements arrayaccess {
 	/** Two-way encryption method (use decode() to reverse the encoding)
 		- from the PHP mcrypt docs (http://docs.php.net/manual/en/function.mcrypt-encrypt.php) */
 	public static function encode($str,$salt){
+		if(empty($salt)) //bypass encoding
+			return $str;
 		if($str=="")
 			return null;
 	    $key = pack('H*', $salt);
@@ -631,6 +633,8 @@ class DTModel implements arrayaccess {
 	/** Reverse two-way encryption method (use encode() to create string)
 		- from the PHP mcrypt docs (http://docs.php.net/manual/en/function.mcrypt-encrypt.php) */
 	public static function decode($str,$salt){
+		if(empty($salt)) //bypass decoding
+			return $str;
 		if(empty($str))
 			return "";
 		$key = pack('H*', $salt);
