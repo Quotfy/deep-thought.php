@@ -45,6 +45,8 @@ class DTModel implements arrayaccess {
 	protected $input=array();
 	public $id = 0;
 
+	protected $dt_recursion_depth;
+
     protected $_properties = array(); /** @internal */
     protected $_bypass_accessors = false; /** @internal a flag used to bypass accessors during construction */
 
@@ -133,21 +135,38 @@ class DTModel implements arrayaccess {
 		}
 		$manifest = static::hasManyManifest();
 		if(isset($manifest[$offset])){
-			$val = $this->getMany($manifest[$offset]);
-			if(property_exists($this, $offset))
-				$this->$offset = $val;
-			else
-				$this->_properties[$offset] = $val;
-			return $val;
+			if(!isset($this->dt_recursion_depth)) // we are at the top of the chain
+				if(isset($manifest[$offset][2])) // use the specified depth
+					$this->dt_recursion_depth = $manifest[$offset][2];
+				else
+					$this->dt_recursion_depth = 3;
+			if($this->dt_recursion_depth>0){
+				$val = $this->getMany($manifest[$offset]);
+				foreach($val as $v) // decrement our recursion counter
+					$v->dt_recursion_depth = $this->dt_recursion_depth-1;
+				if(property_exists($this, $offset))
+					$this->$offset = $val;
+				else
+					$this->_properties[$offset] = $val;
+				return $val;
+			}
 		}
 		$manifest = static::hasAManifest();
 		if(isset($manifest[$offset])){
-			$val = $this->getA($manifest[$offset][0],$manifest[$offset][1]);
-			if(property_exists($this, $offset))
-				$this->$offset = $val;
-			else
-				$this->_properties[$offset] = $val;
-			return $val;
+			if(!isset($this->dt_recursion_depth)) // we are at the top of the chain
+				if(isset($manifest[$offset][2])) // use the specified depth
+					$this->dt_recursion_depth = $manifest[$offset][2];
+				else
+					$this->dt_recursion_depth = 3;
+			if($this->dt_recursion_depth>0){ // don't let us go wild here
+				$val = $this->getA($manifest[$offset][0],$manifest[$offset][1]);
+				$val->dt_recursion_depth = $this->dt_recursion_depth-1;
+				if(property_exists($this, $offset))
+					$this->$offset = $val;
+				else
+					$this->_properties[$offset] = $val;
+				return $val;
+			}
 		}
 		return null;
     }
@@ -702,8 +721,10 @@ class DTModel implements arrayaccess {
 		return json_encode($this->publicProperties());
 	}
 
-	public function getA($class,$column){
-
+	public function getA($class,$column,$depth=3){
+		//DTLog::debug($depth);
+		if($depth<=0) // don't let us get too far down the rabbit hole
+			return null;
 		try{
 			return new $class($this->db->filter(array($class::$primary_key_column=>$this[$column])));
 		}catch(Exception $e){}

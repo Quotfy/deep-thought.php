@@ -73,6 +73,22 @@ INSERT INTO table_e (id,name,aa_id) VALUES (501,'E1',113);
 INSERT INTO table_e (id,name,aa_id) VALUES (502,'E2',113);
 INSERT INTO table_e (id,name,aa_id) VALUES (503,'E3',9913);
 
+CREATE TABLE friends (
+	id integer primary key autoincrement,
+	name text,
+	best_friend_id integer
+);
+INSERT INTO friends (id,name,best_friend_id) VALUES (1,'tweedle dee',2);
+INSERT INTO friends (id,name,best_friend_id) VALUES (2,'tweedle dum',1);
+
+CREATE TABLE plays_with (
+	id integer primary key autoincrement,
+	player_id integer,
+	playee_id integer
+);
+INSERT INTO plays_with (player_id,playee_id) VALUES (1,2);
+INSERT INTO plays_with (player_id,playee_id) VALUES (2,1);
+
 END;
 	}
 
@@ -300,6 +316,19 @@ END;
 		$aa = new ModelAA($this->db->filter(array("ModelAA.id"=>113)));
 		$this->assertEquals(2,count($aa["e_list"]));
 	}
+
+	/** test recursive has_a relationships */
+	public function testBestFriends(){
+		$tweedle_dee = new Friend($this->db->filter(array("name"=>"tweedle dee")));
+		$this->assertNull($tweedle_dee["best_friend"]["best_friend"]["best_friend"]["best_friend"]["best_friend"]["best_friend"]);
+	}
+
+	/** test recursive many-to-many relationships */
+	public function testFriends(){
+		$tweedle_dee = new Friend($this->db->filter(array("name"=>"tweedle dee")));
+		$this->assertNotNull($tweedle_dee["friends"][0]["friends"][0]["friends"]);
+		$this->assertNull($tweedle_dee["friends"][0]["friends"][0]["friends"][0]["friends"]);
+	}
 }
 
 class TestModel extends DTModel{
@@ -418,4 +447,24 @@ class ModelE extends DTModel{
 	);
 	public $name;
 	public $aa;
+}
+
+class Friend extends DTModel{
+	protected static $storage_table = "friends";
+	protected static $has_a_manifest = array(
+		"best_friend"=>array("Friend","best_friend_id",5)
+	);
+	protected static $has_many_manifest = array(
+			"friends"=>array("PlaysWith","Friend")
+	);
+
+	public $friends;
+	public $best_friend;
+}
+
+class PlaysWith extends DTModel{
+	protected static $storage_table = "plays_with";
+	protected static $has_a_manifest = array(
+		"playee"=>array("Friend","playee_id")
+	);
 }
