@@ -241,7 +241,7 @@ class DTModel implements arrayaccess {
     $manifest = $this->isAManifest();
     if(count($manifest)>0){ //we need to use the parent class id
       //get our backreference as a set of models we can hash through
-      $backref = array_map(function($i){return $i[0];},array_values($last_alias::hasAManifest()));
+      $backref = array_map(function($i){return $i[0];},array_values($last_model::hasAManifest()));
       $m = get_called_class();
       foreach($manifest as $col=>$next_m){ // join in parent classes
 				$owner_m = $m::aliasForOwner($col);
