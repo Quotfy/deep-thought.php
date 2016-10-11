@@ -245,7 +245,7 @@ class DTModel implements arrayaccess {
       $m = get_called_class();
       foreach($manifest as $col=>$next_m){ // join in parent classes
 				$owner_m = $m::aliasForOwner($col);
-        $qb->join($m::$storage_table." ".$m,$owner_m.".".$col."=".$this[$col]);
+        $qb->join($m::$storage_table." ".$owner_m,$owner_m.".".$col."=".$this[$col]);
         if(in_array($m,$backref)) // step in with our actual filter value
           $qb->filter(array("{$last_alias}.{$key_col}"=>$key_val));
         $key_val = $this[$col];
@@ -721,10 +721,7 @@ class DTModel implements arrayaccess {
 		return json_encode($this->publicProperties());
 	}
 
-	public function getA($class,$column,$depth=3){
-		//DTLog::debug($depth);
-		if($depth<=0) // don't let us get too far down the rabbit hole
-			return null;
+	public function getA($class,$column){
 		try{
 			return new $class($this->db->filter(array($class::$primary_key_column=>$this[$column])));
 		}catch(Exception $e){}
