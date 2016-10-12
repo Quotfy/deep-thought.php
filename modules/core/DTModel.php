@@ -522,7 +522,7 @@ class DTModel implements arrayaccess {
 			}else
 				throw $e;
 		}
-		return $obj;
+		return static::byID($qb->db,$obj[static::$primary_key_column]);
 	}
 
 	protected function upsertAncestors(array $params){
