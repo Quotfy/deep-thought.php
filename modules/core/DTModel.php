@@ -160,7 +160,8 @@ class DTModel implements arrayaccess {
 					$this->dt_recursion_depth = 3;
 			if($this->dt_recursion_depth>0){ // don't let us go wild here
 				$val = $this->getA($manifest[$offset][0],$manifest[$offset][1]);
-				$val->dt_recursion_depth = $this->dt_recursion_depth-1;
+				if(isset($val))
+					$val->dt_recursion_depth = $this->dt_recursion_depth-1;
 				if(property_exists($this, $offset))
 					$this->$offset = $val;
 				else
