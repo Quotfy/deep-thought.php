@@ -136,7 +136,7 @@ class DTModel implements arrayaccess {
 		$manifest = static::hasManyManifest();
 		if(isset($manifest[$offset])){
 			if(!isset($this->dt_recursion_depth)) // we are at the top of the chain
-				if(isset($manifest[$offset][2])) // use the specified depth
+				if(is_integer($manifest[$offset][count($manifest[$offset])-1])) // use the specified depth
 					$this->dt_recursion_depth = $manifest[$offset][2];
 				else
 					$this->dt_recursion_depth = 3;
