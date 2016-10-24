@@ -151,8 +151,11 @@ class DTParams implements arrayaccess{
 //====================
 //! Parse Methods
 //====================
+	/** converts values to true/false, but retains null */
 	public static function parseBool($val){
 		if(is_bool($val)) return $val;
+		if($val===null) // retain null values
+			return null;
 		if(is_string($val))
 			$val = trim(strtolower($val));
 		else
