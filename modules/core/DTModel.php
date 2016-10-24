@@ -246,7 +246,8 @@ class DTModel implements arrayaccess {
       $m = get_called_class();
       foreach($manifest as $col=>$next_m){ // join in parent classes
 				$owner_m = $m::aliasForOwner($col);
-        $qb->join($m::$storage_table." ".$owner_m,$owner_m.".".$col."=".$this[$col]);
+				$col_val = $this[$col]==""?"0":$this[$col]; // use 0 for empty values
+        $qb->join($m::$storage_table." ".$owner_m,$owner_m.".".$col."=".$col_val);
         if(in_array($m,$backref)) // step in with our actual filter value
           $qb->filter(array("{$last_alias}.{$key_col}"=>$key_val));
         $key_val = $this[$col];
@@ -846,7 +847,16 @@ class DTModel implements arrayaccess {
 	*	@return Array a SELECT-safe set of parameters, by removing all non-storage params
 	*/
 	public static function searchFilter($params,$db){
+		$model = get_called_class();
 		$storage_cols = array_flip($db->columnsForTable(static::$storage_table));
-		return array_intersect_key($params,$storage_cols);
+		$cols = array_intersect_key($params,$storage_cols);
+		$out=array();
+		foreach($cols as $k=>$v) // qualify the column names with the model
+			$out["{$model}.{$k}"] = $v;
+		// we don't always join on the parent (e.g. creating), so we can't do this...
+		//$parent = get_parent_class(get_called_class());
+		//if($parent)
+		//	$out = array_merge($out,$parent::searchFilter($params,$db));
+		return $out;
 	}
 }
