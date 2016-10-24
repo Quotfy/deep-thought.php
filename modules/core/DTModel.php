@@ -45,7 +45,7 @@ class DTModel implements arrayaccess {
 	protected $input=array();
 	public $id = 0;
 
-	protected $dt_recursion_depth;
+	protected $dt_recursion_depth = 1;
 
     protected $_properties = array(); /** @internal */
     protected $_bypass_accessors = false; /** @internal a flag used to bypass accessors during construction */
@@ -135,11 +135,11 @@ class DTModel implements arrayaccess {
 		}
 		$manifest = static::hasManyManifest();
 		if(isset($manifest[$offset])){
-			if(!isset($this->dt_recursion_depth)) // we are at the top of the chain
-				if(is_integer($manifest[$offset][count($manifest[$offset])-1])) // use the specified depth
-					$this->dt_recursion_depth = $manifest[$offset][2];
-				else
-					$this->dt_recursion_depth = 3;
+			if(!isset($this->dt_recursion_depth)){ // we are at the top of the chain
+				$last_idx = count($manifest[$offset])-1;
+				if(is_integer($manifest[$offset][$last_idx])) // use the specified depth
+					$this->dt_recursion_depth = $manifest[$offset][$last_idx];
+			}
 			if($this->dt_recursion_depth>0){
 				$val = $this->getMany($manifest[$offset]);
 				foreach($val as $v) // decrement our recursion counter
@@ -156,8 +156,6 @@ class DTModel implements arrayaccess {
 			if(!isset($this->dt_recursion_depth)) // we are at the top of the chain
 				if(isset($manifest[$offset][2])) // use the specified depth
 					$this->dt_recursion_depth = $manifest[$offset][2];
-				else
-					$this->dt_recursion_depth = 3;
 			if($this->dt_recursion_depth>0){ // don't let us go wild here
 				$val = $this->getA($manifest[$offset][0],$manifest[$offset][1]);
 				if(isset($val))
@@ -202,8 +200,10 @@ class DTModel implements arrayaccess {
 		    $manifest = $this->hasManyManifest();
 		    $chain = $manifest[$chainOrName];
 		}
-	    if(!isset($qb))
-		    $qb = $this->db->qb();
+		if(is_integer($chain[count($chain)-1])) // take the recursion limit off
+			array_pop($chain);
+    if(!isset($qb))
+	    $qb = $this->db->qb();
 
 		$link = explode(".",$chain[0]);
 	    $key_col = $link[0]::columnForModel(get_called_class());
@@ -301,6 +301,8 @@ class DTModel implements arrayaccess {
 		    $manifest = $this->hasManyManifest();
 		    $chain = $manifest[$chainOrName];
 		}
+		if(is_integer($chain[count($chain)-1])) // take the recursion limit off
+			array_pop($chain);
 
 	    //prepare the parameters for filter/upsert in the target table (builder_f)
 	    $link = explode(".",$chain[count($chain)-1]);

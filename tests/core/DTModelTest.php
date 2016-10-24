@@ -457,6 +457,7 @@ class Friend extends DTModel{
 	protected static $has_many_manifest = array(
 			"friends"=>array("PlaysWith","Friend")
 	);
+	protected $dt_recursion_depth = 3;
 
 	public $friends;
 	public $best_friend;
