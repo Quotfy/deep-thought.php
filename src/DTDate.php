@@ -82,8 +82,9 @@ class DTDate{
   /**
    * basic US date formatter method (MM/DD/YYYY)
    */
-	public static function dateUS($ts){
-		return isset($ts)?date("m/d/Y",strtotime($ts)):"";
+	public static function mdy($ts){
+    $ymd = strtotime($ts);
+		return $ymd?date("m/d/Y",$ymd):"";
 	}
 
   /**
