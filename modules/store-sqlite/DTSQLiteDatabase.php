@@ -11,10 +11,10 @@
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -35,7 +35,7 @@ class DTSQLiteDatabase extends DTStore{
 
 	/**
 	 * connects to an SQLite data store via data source name.
-	 * 
+	 *
 	 * @access public
 	 * @abstract
 	 * @param string $dsn
@@ -47,14 +47,14 @@ class DTSQLiteDatabase extends DTStore{
 		$this->conn = new \SQLite3($database);
 		$this->conn->createFunction('LEVENSHTEIN', 'DTSQLiteDatabase::levenshtein', 2);
 	}
-	
+
 	public static function levenshtein($a, $b){
 		return levenshtein($a, $b);
 	}
-	
+
 	/**
 	 * execute the given select statement and return the results.
-	 * 
+	 *
 	 * @access public
 	 * @param string $stmt
 	 * @retval array returns the results of a query
@@ -69,10 +69,10 @@ class DTSQLiteDatabase extends DTStore{
 			$object[] = $row;
 		return $object;
 	}
-	
+
 	/**
 	 * executes a given query without expecting a result.
-	 * 
+	 *
 	 * @access public
 	 * @param string $stmt
 	 * @return void
@@ -81,10 +81,10 @@ class DTSQLiteDatabase extends DTStore{
 		if(@$this->conn->exec($stmt)===false)
 			throw new \Exception(DTLog::colorize($this->conn->lastErrorMsg(),"error")."\n".$stmt);
 	}
-	
+
 	/**
 	 * makes a value safe for storage.
-	 * 
+	 *
 	 * @access public
 	 * @param string $val
 	 * @retval string the cleaned value
@@ -92,10 +92,10 @@ class DTSQLiteDatabase extends DTStore{
 	public function clean($val){
 		return $this->conn->escapeString($val);
 	}
-	
+
 	/**
 	 * disconnects from data store, saving any ongoing transactions.
-	 * 
+	 *
 	 * @access public
 	 * @return void
 	 */
@@ -105,20 +105,20 @@ class DTSQLiteDatabase extends DTStore{
 		if(@$this->conn->close()===false)
 			throw new \Exception(DTLog::colorize($this->conn->lastErrorMsg(),"error")."\n".$stmt);
 	}
-	
+
 	/**
 	 * get the ID for the last inserted row.
-	 * 
+	 *
 	 * @access public
 	 * @retval int returns the id of the last row inserted or 0
 	 */
 	public function lastInsertID(){
 		return $this->conn->lastInsertRowID();
 	}
-	
+
 	/**
 	 * execute an insert statement.
-	 * 
+	 *
 	 * @access public
 	 * @param string $stmt
 	 * @retval int the id of the new row
@@ -127,10 +127,10 @@ class DTSQLiteDatabase extends DTStore{
 		$this->query($stmt);
 		return $this->lastInsertID();
 	}
-	
+
 	/**
 	 * create the relevant placeholder value for a prepared statement.
-	 * 
+	 *
 	 * @access public
 	 * @param array &$params the mainfest for prepared values
 	 * @param mixed $val the value to exchange for the placeholder
@@ -141,10 +141,10 @@ class DTSQLiteDatabase extends DTStore{
 		$i = count($params);
 		return ":{$i}";
 	}
-	
+
 	/**
 	 * create a query builder to represent a prepared statement.
-	 * 
+	 *
 	 * @access public
 	 * @param string $stmt (optional) a unique name for the prepared statement
 	 * @param string $name (default:null) the name of the statement, randomly generated if not supplied
@@ -154,7 +154,7 @@ class DTSQLiteDatabase extends DTStore{
 		$name = isset($name)?$name:"DT_prepared_".rand();
 		return $this->conn->prepare($stmt);
 	}
-	
+
 	public function execute($stmt,$params=array()){
 		foreach($params as $i=>$p){
 			$type = SQLITE3_TEXT;
@@ -175,22 +175,25 @@ class DTSQLiteDatabase extends DTStore{
 		}
 		return $rows;
 	}
-	
+
 	/**
 	 * get the list of column names for a table.
-	 * 
+	 *
 	 * @access public
 	 * @param string $table the name of the table
 	 * @retval array the list of table columns
 	 */
+	protected $_storage_cols = array();
 	public function columnsForTable($table){
-		return array_reduce($this->select("PRAGMA table_info(`{$table}`)"),
-			function($rV,$cV) { $rV[]=$cV['name']; return $rV; },array());
+		if(!isset($this->_storage_cols[$table]))
+			$this->_storage_cols[$table] = array_reduce($this->select("PRAGMA table_info(`{$table}`)"),
+				function($rV,$cV) { $rV[]=$cV['name']; return $rV; },array());
+		return $this->_storage_cols[$table];
 	}
-	
+
 	/**
 	 * get a generic type for +$table_name+.+$column_name+.
-	 * 
+	 *
 	 * @access public
 	 * @abstract
 	 * @param string $table_name
@@ -203,15 +206,15 @@ class DTSQLiteDatabase extends DTStore{
 			return $types[$column_name];
 		return "text";
 	}
-	
+
 	public function typesForTable($table_name){
 		return array_reduce($this->select("PRAGMA table_info(`{$table_name}`)"),
 			function($rV,$cV) { $rV[$cV['name']]=$cV['type']; return $rV; },array());
 	}
-	
+
 	/**
 	 * get the list of all the tables.
-	 * 
+	 *
 	 * @access public
 	 * @retval array the list of table names
 	 */

@@ -296,6 +296,8 @@ class DTModel implements arrayaccess {
 		@return returns the entries from the final link (should match getMany)
 	*/
 	public function setMany($chainOrName,$vals,$builder_f=null){
+		if($vals===null)
+			return; // skip this--it is probably recursion-limited, otherwise it should be an empty row
 		$chain = $chainOrName;
 	    if(!is_array($chainOrName)){
 		    $manifest = $this->hasManyManifest();

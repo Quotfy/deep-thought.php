@@ -11,10 +11,10 @@
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -30,7 +30,7 @@
  * @link       http://www.expressiveanalytics.com/
  * @since      version 1.0.0
  */
- 
+
 class DTPgSQLDatabase extends DTStore{
 	public $ilike = "ILIKE";
 	public $escape = "'";
@@ -46,7 +46,7 @@ class DTPgSQLDatabase extends DTStore{
 			throw new \Exception(DTLog::colorize("Could not connect to PostgreSQL.","error")."\ndatabase: host={$host} dbname={$db} user={$user}");
 		@pg_set_client_encoding($this->conn, "UTF8");
 	}
-	
+
 	public function select($query){
 		$result = @pg_query($this->conn,$query);
 		if(!$result){
@@ -81,43 +81,43 @@ class DTPgSQLDatabase extends DTStore{
 		}
 		return $rows;
 	}
-	
+
 	public function query($query){
 		if(@pg_query($this->conn,$query)===false)
 			DTLog::error("Failed query: ".pg_last_error()."\n{$query}");
 	}
-	
+
 	public function clean($param){
 		return @pg_escape_string($this->conn,$param);
 	}
-	
+
 	public function disconnect(){
 		@pg_close($this->conn);
 		$this->conn = null;
 	}
-	
+
 	public function lastInsertID(){
 		$query = "SELECT LASTVAL() as id";
 		$rows = $this->select($query); //get the id
 		if(count($rows)==0) return 0;
 		return $rows[0]["id"];
 	}
-	
+
 	public function insert($query){
 		$this->query($query);
 		return $this->lastInsertID();
 	}
-	
+
 	public function placeholder(&$params,$val){
 		$params[] = $val;
 		$i = count($params);
 		return "\${$i}";
 	}
-	
-	
+
+
 	/**
 	 * prepare a statement.
-	 * 
+	 *
 	 * @access public
 	 * @param string $query
 	 * @param string $name (default: null) the name of the statement, or a randomly generated name
@@ -129,7 +129,7 @@ class DTPgSQLDatabase extends DTStore{
 			throw new \Exception(DTLog::colorize(pg_last_error(),"error"));
 		return $name;
 	}
-	
+
 	public function execute($stmt,$params=array()){
 		$result = @pg_execute($this->conn,$stmt,$params);
 		if($result===false)
@@ -140,24 +140,27 @@ class DTPgSQLDatabase extends DTStore{
 		}
 		return $rows;
 	}
-	
+
+  protected $_storage_cols = array();
 	public function columnsForTable($table){
-		return array_reduce( $this->select("select column_name from information_schema.columns where table_name='{$table}'"),
-			function($row,$item) { $row[]=$item['column_name']; return $row; },array());
+    if(!isset($this->_storage_cols[$table]))
+			$this->_storage_cols[$table] = array_reduce( $this->select("select column_name from information_schema.columns where table_name='{$table}'"),
+			   function($row,$item) { $row[]=$item['column_name']; return $row; },array());
+    return $this->_storage_cols[$table];
 	}
-	
+
 	public function typeForColumn($table_name,$column_name){
 		$types = $this->typesForTable($table_name);
 		if(isset($types[$column_name]))
 			return $types[$column_name];
 		return "text";
 	}
-	
+
 	public function typesForTable($table_name){
 		return array_reduce( $this->select("select column_name, data_type from information_schema.columns where table_name='{$table_name}'"),
 			function($row,$item) { $row[$item['column_name']]=$item['data_type']; return $row; },array());
 	}
-	
+
 	public function allTables(){
 		return array_reduce($this->select("SELECT relname FROM pg_stat_user_tables ORDER BY relname"),
 			function($row,$item) { $row[]=$item["relname"]; return $row; }, array());
