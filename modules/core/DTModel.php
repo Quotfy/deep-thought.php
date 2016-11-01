@@ -45,7 +45,7 @@ class DTModel implements arrayaccess {
 	protected $input=array();
 	public $id = 0;
 
-	protected $dt_recursion_depth = 1;
+	protected $dt_recursion_depth=null;
 
     protected $_properties = array(); /** @internal */
     protected $_bypass_accessors = false; /** @internal a flag used to bypass accessors during construction */
@@ -139,6 +139,8 @@ class DTModel implements arrayaccess {
 				$last_idx = count($manifest[$offset])-1;
 				if(is_integer($manifest[$offset][$last_idx])) // use the specified depth
 					$this->dt_recursion_depth = $manifest[$offset][$last_idx];
+				else
+					$this->dt_recursion_depth = count($manifest[$offset]); //default recursion depth is the length of the chain
 			}
 			if($this->dt_recursion_depth>0){
 				$val = $this->getMany($manifest[$offset]);
@@ -156,6 +158,8 @@ class DTModel implements arrayaccess {
 			if(!isset($this->dt_recursion_depth)) // we are at the top of the chain
 				if(isset($manifest[$offset][2])) // use the specified depth
 					$this->dt_recursion_depth = $manifest[$offset][2];
+				else
+					$this->dt_recursion_depth = count($manifest[$offset]); //default recursion depth is the length of the chain
 			if($this->dt_recursion_depth>0){ // don't let us go wild here
 				$val = $this->getA($manifest[$offset][0],$manifest[$offset][1]);
 				if(isset($val))
